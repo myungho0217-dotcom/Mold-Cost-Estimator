@@ -1,0 +1,1016 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>사출금형 견적 시뮬레이터 — UI 디자인 시안 V1.0</title>
+<style>
+/* ─────────────────────────────────────────────
+   디자인 토큰 — 5.금형견적_UI디자인시안.md 1.2장
+   이 값이 유일한 출처다. 색을 새로 고르지 않는다.
+   ───────────────────────────────────────────── */
+:root{
+  --c-panel:#0F172A;
+  --c-panel-deep:#020617;
+  --c-section:#F8FAFC;
+  --c-accent:#10B981;
+  --c-accent-sub:#FCD34D;
+  --c-info:#2DD4BF;
+  --c-bg:#F1F5F9;
+  --c-surface:#FFFFFF;
+  --c-border:#E2E8F0;
+  --c-border-strong:#CBD5E1;
+  --c-text:#1E293B;
+  --c-text-muted:#64748B;
+  --c-text-faint:#94A3B8;
+  --c-text-inv:#F1F5F9;
+  --c-success:#059669;
+  --c-warning:#D97706;
+  --c-error:#DC2626;
+
+  --f-sans:Pretendard,-apple-system,"Segoe UI","Malgun Gothic",sans-serif;
+  --f-mono:"SF Mono",Consolas,"D2Coding",monospace;
+}
+
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{
+  font-family:var(--f-sans);
+  background:var(--c-bg);
+  color:var(--c-text);
+  font-size:14px;
+  line-height:1.6;
+}
+.num{font-family:var(--f-mono);font-variant-numeric:tabular-nums}
+a{color:var(--c-success)}
+a:hover{color:#047857}
+button{font-family:inherit;cursor:pointer}
+input,select{font-family:inherit}
+
+/* ── 레이아웃 ── */
+.wrap{max-width:1480px;margin:0 auto;padding:24px}
+
+.doc-head{
+  background:var(--c-surface);
+  border:1px solid var(--c-border);
+  border-radius:12px 12px 0 0;
+  padding:26px 32px 22px;
+}
+.doc-head h1{margin:0 0 6px;font-size:24px;font-weight:700;color:var(--c-panel);line-height:1.3}
+.doc-head p{margin:0;font-size:13px;color:var(--c-text-muted)}
+.doc-meta{display:flex;flex-wrap:wrap;gap:8px 20px;margin-top:14px;font-size:11px;color:var(--c-text-faint)}
+.doc-meta b{color:var(--c-text-muted);font-weight:600}
+
+/* ── 탭 ── */
+.tablist{
+  display:flex;flex-wrap:wrap;gap:2px;
+  background:var(--c-surface);
+  border:1px solid var(--c-border);
+  border-top:none;
+  padding:0 18px;
+}
+.tablist button{
+  appearance:none;background:transparent;border:none;
+  border-bottom:2px solid transparent;
+  padding:13px 15px;
+  font-size:13px;font-weight:500;color:var(--c-text-muted);
+  transition:color .15s,border-color .15s,background .15s;
+}
+.tablist button:hover{color:var(--c-text);background:var(--c-section)}
+.tablist button:focus-visible{outline:none;box-shadow:inset 0 0 0 2px #34D399;border-radius:4px}
+.tablist button[aria-selected="true"]{
+  color:var(--c-panel);font-weight:700;
+  border-bottom-color:var(--c-accent);
+}
+
+.panel{
+  background:var(--c-surface);
+  border:1px solid var(--c-border);
+  border-top:none;
+  border-radius:0 0 12px 12px;
+  padding:32px;
+}
+.panel[hidden]{display:none}
+
+/* ── 공통 요소 ── */
+h2.sec{margin:0 0 4px;font-size:20px;font-weight:700;color:var(--c-panel)}
+p.sec-sub{margin:0 0 22px;font-size:13px;color:var(--c-text-muted)}
+h3.sub{margin:28px 0 12px;font-size:15px;font-weight:600;color:#334155}
+h3.sub:first-of-type{margin-top:0}
+
+.card{background:var(--c-section);border:1px solid var(--c-border);border-radius:8px;padding:18px 20px}
+.note{
+  background:#FFFBEB;border-left:4px solid var(--c-warning);border-radius:6px;
+  padding:14px 16px;font-size:12px;color:#78350F;line-height:1.65;
+}
+.note b{color:#92400E}
+.hint{font-size:11px;color:var(--c-text-muted);line-height:1.55;margin-top:10px}
+
+table.spec{width:100%;border-collapse:collapse;font-size:12px}
+table.spec th,table.spec td{padding:9px 11px;text-align:left;border-bottom:1px solid var(--c-border);vertical-align:top}
+table.spec th{background:var(--c-section);font-weight:600;color:#334155;font-size:11px;white-space:nowrap}
+table.spec td{color:var(--c-text)}
+table.spec tr:last-child td{border-bottom:none}
+
+/* ── 컨셉 ── */
+.concept-hero{
+  background:var(--c-panel);border-radius:12px;padding:26px 28px;margin-bottom:24px;
+}
+.concept-hero .eyebrow{font-size:12px;font-weight:600;color:var(--c-info);margin-bottom:8px}
+.concept-hero .big{font-size:28px;font-weight:700;color:var(--c-text-inv);line-height:1.35}
+.concept-hero .sub{font-size:14px;color:var(--c-text-faint);margin-top:8px}
+
+.principles{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:14px;margin-bottom:24px}
+.principle{display:flex;gap:14px;align-items:flex-start;background:var(--c-section);border:1px solid var(--c-border);border-radius:8px;padding:15px 17px}
+.principle .n{font-family:var(--f-mono);font-size:13px;font-weight:700;color:var(--c-accent);padding-top:2px}
+.principle .t{font-size:14px;font-weight:600;color:var(--c-text);margin-bottom:3px}
+.principle .d{font-size:12.5px;color:var(--c-text-muted);line-height:1.55}
+
+/* ── 컬러 ── */
+.swatches{display:grid;grid-template-columns:repeat(auto-fill,minmax(186px,1fr));gap:14px}
+.sw{border:1px solid var(--c-border);border-radius:8px;overflow:hidden}
+.sw .chip{height:52px;border-bottom:1px solid var(--c-border)}
+.sw .body{padding:10px 12px}
+.sw .role{font-size:12px;font-weight:600;color:var(--c-text)}
+.sw .hex{font-family:var(--f-mono);font-size:12px;color:#334155;margin-top:2px}
+.sw .tw{font-family:var(--f-mono);font-size:10px;color:var(--c-text-faint);margin-top:1px}
+.sw .use{font-size:10.5px;color:var(--c-text-muted);margin-top:4px;line-height:1.45}
+
+.contrast{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:12px}
+.ct{border:1px solid var(--c-border);border-radius:8px;overflow:hidden}
+.ct .demo{padding:14px 16px}
+.ct .meta{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:8px 14px;background:var(--c-section);border-top:1px solid var(--c-border)}
+.ct .meta .pair{font-family:var(--f-mono);font-size:11px;color:var(--c-text-muted)}
+.ct .meta .ratio{font-family:var(--f-mono);font-size:11px;font-weight:700;color:#047857;white-space:nowrap}
+
+/* ── 타이포 ── */
+.type-row{display:flex;align-items:baseline;gap:20px;padding:13px 0;border-bottom:1px solid var(--c-border)}
+.type-row .meta{width:130px;flex-shrink:0;font-family:var(--f-mono);font-size:11px;color:var(--c-text-faint)}
+.type-row .demo{flex:1 1 auto;min-width:0}
+.type-row .use{width:100px;flex-shrink:0;text-align:right;font-size:11px;color:var(--c-text-muted)}
+
+.money-panel{background:var(--c-panel);border-radius:10px;padding:22px 24px;margin-top:8px}
+.money-panel .cap{font-size:12px;font-weight:600;color:var(--c-info);margin-bottom:16px}
+.money-row{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:13px}
+.money-row .k{font-size:13px;color:var(--c-text-faint)}
+.money-row .v{font-family:var(--f-mono);font-variant-numeric:tabular-nums;font-size:14px;font-weight:500;color:var(--c-text-inv)}
+.money-row.sub .v{color:var(--c-accent-sub);font-weight:600;font-size:15px}
+.money-row.final{border-top:1px dashed #334155;padding-top:16px;margin-bottom:0}
+.money-row.final .v{font-size:30px;font-weight:900;color:var(--c-accent);line-height:1.2}
+
+.stack-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:16px;margin-top:8px}
+code.stack{display:block;font-family:var(--f-mono);font-size:10.5px;color:#475569;line-height:1.7;word-break:break-all;margin-top:6px}
+
+/* ── 컴포넌트: 버튼 ── */
+.btn-matrix{display:grid;grid-template-columns:150px repeat(4,minmax(0,1fr));gap:12px;align-items:center}
+.btn-matrix .hd{font-size:11px;font-weight:600;color:var(--c-text-muted)}
+.btn-matrix .rowlabel .t{font-size:13px;font-weight:600;color:var(--c-text)}
+.btn-matrix .rowlabel .d{font-size:11px;color:var(--c-text-faint)}
+
+.btn{border:none;border-radius:8px;transition:background .15s,color .15s,box-shadow .15s}
+.btn-primary{padding:12px 16px;background:var(--c-accent);color:var(--c-panel);font-size:14px;font-weight:700;box-shadow:0 4px 6px rgba(15,23,42,.12)}
+.btn-primary.is-hover{background:var(--c-success);color:#fff}
+.btn-primary.is-focus{box-shadow:0 0 0 2px #fff,0 0 0 4px #34D399}
+.btn-primary:disabled{background:var(--c-text-faint);color:var(--c-text-inv);cursor:not-allowed;box-shadow:none}
+.btn-secondary{padding:10px 14px;background:var(--c-surface);color:#334155;font-size:13px;font-weight:500;border:1px solid var(--c-border-strong)}
+.btn-secondary.is-hover{background:var(--c-section)}
+.btn-secondary.is-focus{box-shadow:0 0 0 2px #fff,0 0 0 4px #34D399}
+.btn-secondary:disabled{opacity:.5;cursor:not-allowed}
+.btn-danger{padding:10px 14px;background:var(--c-surface);color:var(--c-error);font-size:13px;font-weight:500;border:1px solid #FCA5A5}
+.btn-danger.is-hover{background:#FEF2F2}
+.btn-danger.is-focus{box-shadow:0 0 0 2px #fff,0 0 0 4px #34D399}
+.btn-danger:disabled{opacity:.5;cursor:not-allowed}
+.btn-ghost{padding:10px 14px;background:transparent;color:var(--c-text-muted);font-size:13px;font-weight:500}
+.btn-ghost.is-hover{background:var(--c-bg)}
+.btn-ghost.is-focus{box-shadow:0 0 0 2px #fff,0 0 0 4px #34D399}
+.na{font-size:11px;color:var(--c-border-strong)}
+
+/* ── 컴포넌트: 입력 ── */
+.field-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:16px}
+.field{display:flex;flex-direction:column;gap:5px}
+.field label{font-size:12px;font-weight:500;color:var(--c-text-muted)}
+.field .msg{font-size:11px;color:var(--c-text-faint)}
+.field .msg.err{color:var(--c-error)}
+.field .msg.warn{color:var(--c-warning)}
+.inp{width:100%;padding:8px 10px;font-size:14px;color:var(--c-text);background:var(--c-surface);border:1px solid var(--c-border-strong);border-radius:6px}
+.inp.n{text-align:right}
+.inp:focus{outline:none;border-color:var(--c-accent);box-shadow:0 0 0 3px #A7F3D0}
+.inp.is-focus{border-color:var(--c-accent);box-shadow:0 0 0 3px #A7F3D0}
+.inp.is-error{border-color:#EF4444;background:#FEF2F2;color:#991B1B}
+.inp.is-warn{border-color:#FBBF24}
+.inp:disabled{background:var(--c-bg);border-color:var(--c-border);color:var(--c-text-faint)}
+
+/* ── 컴포넌트: 경고 / 토스트 ── */
+.alert{display:flex;gap:10px;align-items:flex-start;padding:12px 14px;border-radius:6px;margin-bottom:10px}
+.alert .ico{font-size:14px;line-height:1.4}
+.alert .msg{font-size:13px;font-weight:500;line-height:1.5}
+.alert.warn{background:#FFFBEB;border-left:4px solid var(--c-warning)}
+.alert.warn .msg{color:#92400E}
+.alert.err{background:#FEF2F2;border-left:4px solid var(--c-error)}
+.alert.err .msg{color:#991B1B}
+
+.toast{min-width:280px;padding:12px 16px;border-radius:8px;box-shadow:0 4px 6px rgba(15,23,42,.15);margin-bottom:10px;font-size:13px;font-weight:500;color:#fff}
+.toast.ok{background:var(--c-success)}
+.toast.warn{background:var(--c-warning)}
+.toast.err{background:var(--c-error)}
+
+.icon-row{display:flex;flex-wrap:wrap;align-items:center;gap:20px}
+.icon-set{font-size:22px;letter-spacing:.3em}
+
+/* ── 목업 공통 ── */
+.mock-wrap{overflow-x:auto;padding:4px;background:var(--c-bg);border:1px solid var(--c-border);border-radius:10px}
+.mock-note{font-size:11px;color:var(--c-text-muted);margin:0 0 10px}
+
+/* SCR-01 */
+.app{width:1380px;background:var(--c-bg);padding:24px}
+.app-card{background:var(--c-surface);border:1px solid var(--c-border);border-radius:12px;box-shadow:0 1px 3px rgba(15,23,42,.08);padding:26px}
+.app-head{display:flex;justify-content:space-between;align-items:flex-end;gap:20px;padding-bottom:16px;border-bottom:1px solid var(--c-border);margin-bottom:20px}
+.app-head h1{margin:0 0 4px;font-size:24px;font-weight:700;color:var(--c-panel);line-height:1.3}
+.app-head .s{font-size:13px;color:var(--c-text-muted)}
+.app-head .acts{display:flex;gap:8px;flex-shrink:0}
+.app-body{display:flex;gap:28px;align-items:stretch}
+.app-left{width:700px;flex-shrink:0;display:flex;flex-direction:column;gap:14px}
+.app-right{flex:1 1 auto;background:var(--c-panel);border-radius:10px;padding:24px;display:flex;flex-direction:column}
+.isec{background:var(--c-section);border:1px solid var(--c-border);border-radius:8px;padding:16px 18px}
+.isec .h{font-size:15px;font-weight:600;color:#334155;margin-bottom:11px;display:flex;justify-content:space-between;align-items:baseline}
+.isec .h .sum{font-family:var(--f-mono);font-size:12px;color:var(--c-text-muted);font-weight:400}
+.g2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:13px}
+.g3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:13px}
+.g2+.g2,.g3+.g2,.g2+.g3{margin-top:13px}
+.res-title{font-size:20px;font-weight:700;color:var(--c-info);padding-bottom:13px;border-bottom:1px solid #334155;margin-bottom:18px}
+.res-list{display:flex;flex-direction:column}
+.res-row{display:flex;justify-content:space-between;align-items:baseline;padding:6px 0}
+.res-row .k{font-size:13px;color:var(--c-text-faint)}
+.res-row .v{font-family:var(--f-mono);font-variant-numeric:tabular-nums;font-size:14px;font-weight:500;color:var(--c-text-inv)}
+.res-row.rule{border-top:1px solid #334155;margin-top:8px;padding-top:14px}
+.res-row.rule .v{color:var(--c-accent-sub);font-weight:600;font-size:15px}
+.res-foot{margin-top:auto;padding-top:22px;border-top:2px dashed #334155}
+.res-final{display:flex;justify-content:space-between;align-items:baseline}
+.res-final .k{font-size:16px;font-weight:700;color:#fff}
+.res-final .v{font-family:var(--f-mono);font-variant-numeric:tabular-nums;font-size:30px;font-weight:900;color:var(--c-accent);line-height:1.2}
+.res-vat{text-align:right;font-size:12px;color:var(--c-text-muted);margin-top:4px}
+.res-btns{display:flex;flex-direction:column;gap:10px;margin-top:18px}
+.btn-save{width:100%;padding:11px 16px;background:transparent;color:var(--c-border-strong);font-size:13px;font-weight:500;border:1px solid #475569;border-radius:8px}
+.btn-print{width:100%;padding:14px 16px;background:var(--c-accent);color:var(--c-panel);font-size:15px;font-weight:700;border:none;border-radius:8px;box-shadow:0 4px 6px rgba(2,6,23,.4)}
+.app-foot{margin-top:16px;padding-top:13px;border-top:1px solid var(--c-border);font-size:12px;color:var(--c-text-faint)}
+
+/* 모달 */
+.dim{width:900px;background:rgba(15,23,42,.5);padding:34px;display:flex;justify-content:center}
+.modal{width:100%;background:var(--c-surface);border-radius:12px;box-shadow:0 20px 40px rgba(2,6,23,.4);overflow:hidden}
+.modal-head{padding:18px 22px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--c-border)}
+.modal-head .t{font-size:18px;font-weight:700;color:var(--c-panel)}
+.modal-head .c{font-family:var(--f-mono);font-size:12px;color:var(--c-text-muted);margin-left:10px;font-weight:400}
+.modal-x{padding:6px 10px;background:transparent;border:none;border-radius:6px;font-size:15px;color:var(--c-text-muted)}
+.modal-tabs{padding:0 22px;display:flex;gap:4px;border-bottom:1px solid var(--c-border)}
+.modal-tabs span{padding:12px 14px;font-size:13px;font-weight:500;color:var(--c-text-muted);border-bottom:2px solid transparent}
+.modal-tabs span.on{color:var(--c-panel);font-weight:600;border-bottom-color:var(--c-accent)}
+.modal-body{padding:22px}
+.modal-foot{padding:16px 22px;background:var(--c-section);border-top:1px solid var(--c-border);display:flex;justify-content:space-between;align-items:center;gap:12px}
+.mrow{display:flex;align-items:center;gap:16px;margin-bottom:12px}
+.mrow label{width:150px;flex-shrink:0;font-size:13px;font-weight:500;color:#334155}
+.mrow .unit{font-size:12px;color:var(--c-text-muted)}
+.mrow .tag{font-size:11px;color:var(--c-text-faint)}
+.mrow input{width:150px}
+.info{display:flex;gap:10px;align-items:flex-start;padding:13px 15px;background:var(--c-section);border:1px solid var(--c-border);border-radius:6px;font-size:12px;color:var(--c-text-muted);line-height:1.6;margin-top:6px}
+
+/* 이력 */
+.hist-head,.hist-row{display:flex;align-items:center;gap:12px;padding:11px 22px}
+.hist-head{background:var(--c-section);border-bottom:1px solid var(--c-border);font-size:11px;font-weight:600;color:var(--c-text-muted)}
+.hist-row{border-bottom:1px solid var(--c-border);font-size:13px}
+.hist-row.on{background:var(--c-section)}
+.h-date{width:132px;flex-shrink:0;font-family:var(--f-mono);font-size:12px;color:#475569}
+.h-no{width:120px;flex-shrink:0;font-family:var(--f-mono);font-size:12px;color:#475569}
+.h-cust{width:92px;flex-shrink:0}
+.h-proj{flex:1 1 auto;min-width:0}
+.h-amt{width:108px;flex-shrink:0;text-align:right;font-family:var(--f-mono);font-variant-numeric:tabular-nums;font-weight:600}
+.h-act{width:132px;flex-shrink:0;display:flex;gap:6px;justify-content:flex-end}
+.btn-xs{padding:6px 10px;font-size:12px;font-weight:500;border-radius:6px;background:var(--c-surface);border:1px solid var(--c-border-strong);color:#334155}
+.btn-xs.dang{border-color:#FCA5A5;color:var(--c-error)}
+
+/* 견적서 (A4 96dpi = 794×1123) */
+.a4{width:794px;min-height:1123px;background:#fff;border:1px solid var(--c-border);padding:57px;display:flex;flex-direction:column;gap:20px}
+.q-title{text-align:center;font-size:28px;font-weight:700;color:var(--c-panel);letter-spacing:.4em}
+.q-meta{display:flex;justify-content:space-between;align-items:flex-start;font-family:var(--f-mono);font-size:11px;color:#334155}
+.q-meta .r{text-align:right;display:flex;flex-direction:column;gap:3px}
+.q-parties{display:flex;gap:14px}
+.q-box{flex:1 1 0;border:1px solid var(--c-border-strong);border-radius:4px;overflow:hidden}
+.q-box .bh{padding:7px 12px;background:var(--c-bg);border-bottom:1px solid var(--c-border-strong);font-size:11px;font-weight:700;color:#334155;letter-spacing:.2em}
+.q-box .bb{padding:12px;display:flex;flex-direction:column;gap:7px;font-size:12px}
+.q-box .bb div{display:flex;align-items:center}
+.q-box .bb span.k{width:62px;flex-shrink:0;color:var(--c-text-muted)}
+.seal{width:38px;height:38px;border:1px dashed var(--c-border-strong);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;color:var(--c-text-faint)}
+.q-h{font-size:12px;font-weight:700;color:var(--c-panel);margin-bottom:8px}
+.q-spec{padding:11px 14px;background:var(--c-section);border:1px solid var(--c-border);border-radius:4px;display:flex;flex-wrap:wrap;gap:6px 20px;font-size:11px;color:#334155}
+.q-table{border:1px solid var(--c-text-faint);border-radius:4px;overflow:hidden}
+.q-table .tr{display:flex;border-top:1px solid var(--c-border)}
+.q-table .tr:first-child{border-top:none}
+.q-table .th{background:var(--c-panel);color:#fff;font-size:11px;font-weight:600}
+.q-table .c-no{width:42px;flex-shrink:0;padding:10px;text-align:center;font-family:var(--f-mono);font-size:11px;color:#475569}
+.q-table .th .c-no{color:#fff;font-family:inherit}
+.q-table .c-item{flex:1 1 auto;padding:10px 12px;font-size:12px}
+.q-table .c-amt{width:148px;flex-shrink:0;padding:10px 14px;text-align:right;font-family:var(--f-mono);font-variant-numeric:tabular-nums;font-size:12px}
+.q-table .zebra{background:var(--c-section)}
+.q-table .sumline{border-top:1px solid var(--c-text-faint);font-weight:600}
+.q-table .grand{background:var(--c-bg);border-top:2px solid var(--c-panel)}
+.q-table .grand .c-item{font-size:14px;font-weight:700;color:var(--c-panel);padding:13px 12px}
+.q-table .grand .c-amt{font-size:16px;font-weight:700;color:var(--c-panel);padding:13px 14px}
+.q-terms{display:flex;flex-direction:column;gap:5px;font-size:10px;color:#475569;line-height:1.7}
+.q-foot{margin-top:auto;padding-top:18px;border-top:1px solid var(--c-border);display:flex;justify-content:space-between;align-items:flex-end}
+.q-foot .n{font-size:9px;color:var(--c-text-faint);line-height:1.6}
+.signs{display:flex;gap:26px}
+.sign{display:flex;flex-direction:column;gap:4px;align-items:center}
+.sign .l{font-size:9px;color:var(--c-text-muted)}
+.sign .line{width:68px;height:22px;border-bottom:1px solid var(--c-text-faint)}
+
+/* ── 접근성 탭 ── */
+.a11y-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:14px}
+.a11y{background:var(--c-section);border:1px solid var(--c-border);border-radius:8px;padding:16px 18px}
+.a11y .t{font-size:13px;font-weight:600;color:var(--c-text);margin-bottom:5px}
+.a11y .s{font-size:12px;color:var(--c-text-muted);line-height:1.6}
+.a11y .ok{display:inline-block;margin-top:8px;font-size:11px;font-weight:600;color:#047857}
+
+/* ── 반응형 ── */
+@media (max-width:900px){
+  .wrap{padding:12px}
+  .panel,.doc-head{padding:20px}
+  .btn-matrix{grid-template-columns:1fr;gap:8px}
+  .btn-matrix .hd{display:none}
+}
+
+/* ── 인쇄: 열린 탭만 ── */
+@media print{
+  body{background:#fff}
+  .wrap{max-width:none;padding:0}
+  .tablist,.doc-meta,.mock-note{display:none}
+  .doc-head,.panel{border:none;padding:0}
+  .mock-wrap{overflow:visible;background:#fff;border:none;padding:0}
+  .a4{border:none;padding:15mm}
+  *{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  @page{size:A4;margin:12mm}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="doc-head">
+    <h1>사출금형 견적 시뮬레이터 — UI 디자인 시안</h1>
+    <p>색·타이포·컴포넌트 상태를 확정하는 문서. 개발자가 임의로 색을 고르지 않도록 토큰 단위로 고정한다.</p>
+    <div class="doc-meta">
+      <span><b>버전</b> V1.0</span>
+      <span><b>작성일</b> 2026-09-18</span>
+      <span><b>선행 문서</b> 4.금형견적_와이어프레임.md</span>
+      <span><b>구현</b> Tailwind CSS 유틸리티 클래스</span>
+      <span><b>모드</b> 라이트 전용</span>
+    </div>
+  </header>
+
+  <nav class="tablist" role="tablist" aria-label="UI 시안 모듈">
+    <button role="tab" data-tab="concept"    id="tab-concept"    aria-controls="panel-concept"    aria-selected="true">1. 디자인 컨셉</button>
+    <button role="tab" data-tab="colors"     id="tab-colors"     aria-controls="panel-colors"     aria-selected="false" tabindex="-1">2. 컬러 팔레트</button>
+    <button role="tab" data-tab="type"       id="tab-type"       aria-controls="panel-type"       aria-selected="false" tabindex="-1">3. 타이포그래피</button>
+    <button role="tab" data-tab="components" id="tab-components" aria-controls="panel-components" aria-selected="false" tabindex="-1">4. 컴포넌트</button>
+    <button role="tab" data-tab="scr01"      id="tab-scr01"      aria-controls="panel-scr01"      aria-selected="false" tabindex="-1">SCR-01 시뮬레이터</button>
+    <button role="tab" data-tab="scr02"      id="tab-scr02"      aria-controls="panel-scr02"      aria-selected="false" tabindex="-1">SCR-02 단가설정</button>
+    <button role="tab" data-tab="scr03"      id="tab-scr03"      aria-controls="panel-scr03"      aria-selected="false" tabindex="-1">SCR-03 이력</button>
+    <button role="tab" data-tab="scr04"      id="tab-scr04"      aria-controls="panel-scr04"      aria-selected="false" tabindex="-1">SCR-04 견적서</button>
+    <button role="tab" data-tab="a11y"       id="tab-a11y"       aria-controls="panel-a11y"       aria-selected="false" tabindex="-1">5. 접근성</button>
+  </nav>
+
+  <!-- ══════════ 1. 디자인 컨셉 ══════════ -->
+  <section class="panel" role="tabpanel" id="panel-concept" aria-labelledby="tab-concept" tabindex="0">
+    <h2 class="sec">1. 디자인 컨셉</h2>
+    <p class="sec-sub">톤앤매너와 네 가지 원칙 · 다크 모드 미지원 결정</p>
+
+    <div class="concept-hero">
+      <div class="eyebrow">톤앤매너</div>
+      <div class="big">공장 사무실의 계기판</div>
+      <div class="sub">장식을 배제하고 숫자의 가독성만을 좇는다.</div>
+    </div>
+
+    <h3 class="sub">네 가지 원칙</h3>
+    <div class="principles">
+      <div class="principle"><div class="n">01</div><div><div class="t">숫자가 주인공</div><div class="d">금액은 고정폭 서체로 자릿수가 세로로 정렬되게 한다.</div></div></div>
+      <div class="principle"><div class="n">02</div><div><div class="t">입력과 결과의 명암 대비</div><div class="d">입력부는 밝은 배경, 결과부는 어두운 배경. 시선이 결과로 끌린다.</div></div></div>
+      <div class="principle"><div class="n">03</div><div><div class="t">장식 최소화</div><div class="d">그라데이션·일러스트·애니메이션 없음. 상태 변화는 색과 테두리로만.</div></div></div>
+      <div class="principle"><div class="n">04</div><div><div class="t">경고는 눈에 띄게</div><div class="d">잘못된 견적이 조용히 넘어가지 않도록 색·아이콘·텍스트 3중 표기.</div></div></div>
+    </div>
+
+    <h3 class="sub">다크 모드는 지원하지 않는다</h3>
+    <div class="note">
+      <b>결정 근거</b> — 사용 환경이 주간 사무실 PC로 고정되어 있고, 결과 패널이 이미 어두운 대비 구조라 다크 모드에서 명암 위계가 무너진다. 개발·검증 비용 대비 효용이 없다.
+    </div>
+
+    <h3 class="sub">카드 · 패널 스펙</h3>
+    <table class="spec">
+      <thead><tr><th>요소</th><th>스타일</th></tr></thead>
+      <tbody>
+        <tr><td>입력 섹션 카드</td><td>bg slate-50 / border slate-200 / rounded-lg / p-4 / 섹션 간 간격 24px</td></tr>
+        <tr><td>결과 패널</td><td>bg slate-900 / rounded-lg / p-6 / sticky top-6</td></tr>
+        <tr><td>최종가 영역</td><td>상단 border-t-2 border-dashed border-slate-700 / pt-6</td></tr>
+        <tr><td>모달</td><td>bg white / rounded-xl / shadow-2xl / max-w-2xl / 배경 딤 bg-black/50</td></tr>
+        <tr><td>앱 컨테이너</td><td>max-w-7xl / mx-auto / p-6</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <!-- ══════════ 2. 컬러 ══════════ -->
+  <section class="panel" role="tabpanel" id="panel-colors" aria-labelledby="tab-colors" tabindex="0" hidden>
+    <h2 class="sec">2. 컬러 팔레트</h2>
+    <p class="sec-sub">토큰 15종 · Tailwind 기본 팔레트 기반 · 이 표가 유일한 출처다</p>
+
+    <div class="swatches">
+      <div class="sw"><div class="chip" style="background:#0F172A"></div><div class="body"><div class="role">Primary</div><div class="hex">#0F172A</div><div class="tw">slate-900</div><div class="use">결과 패널 배경, 인쇄 표 헤더</div></div></div>
+      <div class="sw"><div class="chip" style="background:#020617"></div><div class="body"><div class="role">Primary Deep</div><div class="hex">#020617</div><div class="tw">slate-950</div><div class="use">최종가 강조 영역</div></div></div>
+      <div class="sw"><div class="chip" style="background:#F8FAFC"></div><div class="body"><div class="role">Secondary</div><div class="hex">#F8FAFC</div><div class="tw">slate-50</div><div class="use">좌측 입력 섹션 카드</div></div></div>
+      <div class="sw"><div class="chip" style="background:#10B981"></div><div class="body"><div class="role">Accent</div><div class="hex">#10B981</div><div class="tw">emerald-500</div><div class="use">최종 견적가 숫자, 주 버튼</div></div></div>
+      <div class="sw"><div class="chip" style="background:#FCD34D"></div><div class="body"><div class="role">Accent Sub</div><div class="hex">#FCD34D</div><div class="tw">amber-300</div><div class="use">제조원가 소계 숫자</div></div></div>
+      <div class="sw"><div class="chip" style="background:#2DD4BF"></div><div class="body"><div class="role">Info</div><div class="hex">#2DD4BF</div><div class="tw">teal-400</div><div class="use">결과 패널 제목</div></div></div>
+      <div class="sw"><div class="chip" style="background:#F1F5F9"></div><div class="body"><div class="role">Background</div><div class="hex">#F1F5F9</div><div class="tw">slate-100</div><div class="use">페이지 바탕</div></div></div>
+      <div class="sw"><div class="chip" style="background:#FFFFFF"></div><div class="body"><div class="role">Surface</div><div class="hex">#FFFFFF</div><div class="tw">white</div><div class="use">카드·모달 바탕</div></div></div>
+      <div class="sw"><div class="chip" style="background:#E2E8F0"></div><div class="body"><div class="role">Border</div><div class="hex">#E2E8F0</div><div class="tw">slate-200</div><div class="use">구분선, 입력 테두리</div></div></div>
+      <div class="sw"><div class="chip" style="background:#1E293B"></div><div class="body"><div class="role">Text Primary</div><div class="hex">#1E293B</div><div class="tw">slate-800</div><div class="use">본문</div></div></div>
+      <div class="sw"><div class="chip" style="background:#64748B"></div><div class="body"><div class="role">Text Muted</div><div class="hex">#64748B</div><div class="tw">slate-500</div><div class="use">라벨, 단위, 보조 설명</div></div></div>
+      <div class="sw"><div class="chip" style="background:#F1F5F9"></div><div class="body"><div class="role">Text Inverse</div><div class="hex">#F1F5F9</div><div class="tw">slate-100</div><div class="use">어두운 패널 위 텍스트</div></div></div>
+      <div class="sw"><div class="chip" style="background:#059669"></div><div class="body"><div class="role">Success</div><div class="hex">#059669</div><div class="tw">emerald-600</div><div class="use">저장 성공 토스트</div></div></div>
+      <div class="sw"><div class="chip" style="background:#D97706"></div><div class="body"><div class="role">Warning</div><div class="hex">#D97706</div><div class="tw">amber-600</div><div class="use">입력 범위 경고</div></div></div>
+      <div class="sw"><div class="chip" style="background:#DC2626"></div><div class="body"><div class="role">Error</div><div class="hex">#DC2626</div><div class="tw">red-600</div><div class="use">음수 최종가, 저장 실패, 오류 테두리</div></div></div>
+    </div>
+
+    <h3 class="sub">대비비 검증 — WCAG AA 기준 4.5:1</h3>
+    <div class="contrast">
+      <div class="ct">
+        <div class="demo" style="background:#FFFFFF"><span style="font-size:14px;color:#1E293B">본문 텍스트 견본 12,345원</span></div>
+        <div class="meta"><span class="pair">slate-800 on white</span><span class="ratio">12.6:1 AAA</span></div>
+      </div>
+      <div class="ct">
+        <div class="demo" style="background:#F8FAFC"><span style="font-size:14px;color:#64748B">라벨 텍스트 견본 가로 (L, mm)</span></div>
+        <div class="meta"><span class="pair">slate-500 on slate-50</span><span class="ratio">4.8:1 AA</span></div>
+      </div>
+      <div class="ct">
+        <div class="demo" style="background:#0F172A"><span class="num" style="font-size:18px;font-weight:800;color:#10B981">13,931,000 원</span></div>
+        <div class="meta"><span class="pair">emerald-500 on slate-900</span><span class="ratio">7.1:1 AAA</span></div>
+      </div>
+      <div class="ct">
+        <div class="demo" style="background:#0F172A"><span class="num" style="font-size:15px;color:#FCD34D">11,144,800 원</span></div>
+        <div class="meta"><span class="pair">amber-300 on slate-900</span><span class="ratio">10.4:1 AAA</span></div>
+      </div>
+      <div class="ct">
+        <div class="demo" style="background:#FFFFFF"><span style="font-size:14px;color:#DC2626">최종 견적가가 0원 이하입니다</span></div>
+        <div class="meta"><span class="pair">red-600 on white</span><span class="ratio">5.9:1 AA</span></div>
+      </div>
+      <div class="ct">
+        <div class="demo" style="background:#0F172A"><span style="font-size:15px;font-weight:700;color:#2DD4BF">실시간 견적 결과</span></div>
+        <div class="meta"><span class="pair">teal-400 on slate-900</span><span class="ratio">8.3:1 AAA</span></div>
+      </div>
+    </div>
+
+    <div class="note" style="margin-top:22px">
+      <b>경고 표시에 색만 쓰지 않는다</b> — 적록색약 사용자를 위해 모든 경고에 아이콘(⚠)과 문장을 함께 넣는다. 색은 보조 신호다.
+    </div>
+  </section>
+
+  <!-- ══════════ 3. 타이포 ══════════ -->
+  <section class="panel" role="tabpanel" id="panel-type" aria-labelledby="tab-type" tabindex="0" hidden>
+    <h2 class="sec">3. 타이포그래피</h2>
+    <p class="sec-sub">본문 Pretendard · 금액 고정폭 monospace</p>
+
+    <div class="type-row">
+      <div class="meta">24 / 700 / 1.3</div>
+      <div class="demo" style="font-size:24px;font-weight:700;color:#0F172A;line-height:1.3">사출금형 견적 시뮬레이터</div>
+      <div class="use">앱 제목 H1</div>
+    </div>
+    <div class="type-row">
+      <div class="meta">20 / 700 / 1.4</div>
+      <div class="demo" style="font-size:20px;font-weight:700;color:#0D9488;line-height:1.4">실시간 견적 시뮬레이션 결과</div>
+      <div class="use">패널 제목</div>
+    </div>
+    <div class="type-row">
+      <div class="meta">18 / 600 / 1.4</div>
+      <div class="demo" style="font-size:18px;font-weight:600;color:#334155;line-height:1.4">금형 사이즈 및 강재 설정</div>
+      <div class="use">섹션 제목 H2</div>
+    </div>
+    <div class="type-row">
+      <div class="meta">14 / 400 / 1.6</div>
+      <div class="demo" style="font-size:14px;color:#475569;line-height:1.6">입력값을 바꾸면 조회 버튼 없이 즉시 재계산됩니다.</div>
+      <div class="use">본문 · 설명</div>
+    </div>
+    <div class="type-row">
+      <div class="meta">12 / 500 / 1.4</div>
+      <div class="demo" style="font-size:12px;font-weight:500;color:#64748B;line-height:1.4">가로 (L, mm)</div>
+      <div class="use">입력 라벨</div>
+    </div>
+    <div class="type-row">
+      <div class="meta">11 / 400 / 1.4</div>
+      <div class="demo" style="font-size:11px;color:#94A3B8;line-height:1.4">임율 50,000원/hr · 마스터 데이터 연동</div>
+      <div class="use">보조 설명</div>
+    </div>
+    <div class="type-row">
+      <div class="meta">13 / 500 / 1.5</div>
+      <div class="demo" style="font-size:13px;font-weight:500;color:#D97706;line-height:1.5">마진율이 음수입니다. 원가 이하 견적이 됩니다.</div>
+      <div class="use">경고 문구</div>
+    </div>
+
+    <h3 class="sub">금액 전용 — 고정폭 monospace</h3>
+    <div class="money-panel">
+      <div class="cap">결과 패널에 실제 적용되는 스케일</div>
+      <div class="money-row"><span class="k">결과 항목 14 / 500</span><span class="v">2,609,800 원</span></div>
+      <div class="money-row sub"><span class="k">소계 15 / 600</span><span class="v">11,144,800 원</span></div>
+      <div class="money-row final"><span class="k">최종 견적가 30 / 900</span><span class="v">13,931,000</span></div>
+    </div>
+
+    <div class="stack-grid">
+      <div class="card">
+        <div style="font-size:13px;font-weight:600;color:#334155">tabular-nums를 쓰는 이유</div>
+        <div style="font-size:12px;color:#64748B;line-height:1.6;margin-top:6px">실시간 재계산으로 금액이 계속 바뀌는 화면에서 비례폭 숫자를 쓰면 값이 바뀔 때마다 글자가 좌우로 떨린다. 고정폭 숫자는 자릿수가 제자리에 머물러 시선이 안정된다.</div>
+        <div style="margin-top:10px;display:flex;flex-direction:column;gap:3px">
+          <span class="num" style="font-size:13px">11,144,800</span>
+          <span class="num" style="font-size:13px">13,931,000</span>
+          <span class="num" style="font-size:13px">17,452,875</span>
+        </div>
+      </div>
+      <div class="card">
+        <div style="font-size:13px;font-weight:600;color:#334155">폰트 스택</div>
+        <code class="stack">Pretendard, -apple-system, "Segoe UI", "Malgun Gothic", sans-serif</code>
+        <code class="stack">"SF Mono", Consolas, "D2Coding", monospace</code>
+        <div class="hint">CDN 차단 시 시스템 폰트로 폴백한다. 폰트 하나 때문에 앱이 안 뜨는 일은 없어야 한다.</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ══════════ 4. 컴포넌트 ══════════ -->
+  <section class="panel" role="tabpanel" id="panel-components" aria-labelledby="tab-components" tabindex="0" hidden>
+    <h2 class="sec">4. 컴포넌트 스타일 가이드</h2>
+    <p class="sec-sub">상태별 스펙 · transition 150ms · 포커스 ring-2 ring-emerald-400 ring-offset-2</p>
+
+    <h3 class="sub">4.1 버튼</h3>
+    <div class="btn-matrix">
+      <div></div>
+      <div class="hd">Default</div><div class="hd">Hover</div><div class="hd">Focus</div><div class="hd">Disabled</div>
+
+      <div class="rowlabel"><div class="t">Primary</div><div class="d">견적서 출력</div></div>
+      <div><button type="button" class="btn btn-primary">견적서 출력</button></div>
+      <div><button type="button" class="btn btn-primary is-hover">견적서 출력</button></div>
+      <div><button type="button" class="btn btn-primary is-focus">견적서 출력</button></div>
+      <div><button type="button" class="btn btn-primary" disabled>견적서 출력</button></div>
+
+      <div class="rowlabel"><div class="t">Secondary</div><div class="d">저장 · 설정 · 이력</div></div>
+      <div><button type="button" class="btn btn-secondary">견적 저장</button></div>
+      <div><button type="button" class="btn btn-secondary is-hover">견적 저장</button></div>
+      <div><button type="button" class="btn btn-secondary is-focus">견적 저장</button></div>
+      <div><button type="button" class="btn btn-secondary" disabled>견적 저장</button></div>
+
+      <div class="rowlabel"><div class="t">Danger</div><div class="d">삭제 · 초기화</div></div>
+      <div><button type="button" class="btn btn-danger">기본값으로 초기화</button></div>
+      <div><button type="button" class="btn btn-danger is-hover">기본값으로 초기화</button></div>
+      <div><button type="button" class="btn btn-danger is-focus">기본값으로 초기화</button></div>
+      <div><button type="button" class="btn btn-danger" disabled>기본값으로 초기화</button></div>
+
+      <div class="rowlabel"><div class="t">Ghost</div><div class="d">닫기 · 취소</div></div>
+      <div><button type="button" class="btn btn-ghost">취소</button></div>
+      <div><button type="button" class="btn btn-ghost is-hover">취소</button></div>
+      <div><button type="button" class="btn btn-ghost is-focus">취소</button></div>
+      <div><span class="na">해당 없음</span></div>
+    </div>
+
+    <h3 class="sub">4.2 입력 필드</h3>
+    <div class="field-grid">
+      <div class="field">
+        <label for="c1">Default — 가로 (L, mm)</label>
+        <input id="c1" class="inp n" type="number" value="400">
+        <span class="msg">평상시</span>
+      </div>
+      <div class="field">
+        <label for="c2">Focus — 세로 (W, mm)</label>
+        <input id="c2" class="inp n is-focus" type="number" value="400">
+        <span class="msg">클릭 · 탭 이동</span>
+      </div>
+      <div class="field">
+        <label for="c3">Error — 두께 (T, mm)</label>
+        <input id="c3" class="inp n is-error" type="number" value="-350">
+        <span class="msg err">음수는 0으로 처리됩니다</span>
+      </div>
+      <div class="field">
+        <label for="c4">Warning — 목표 마진율 (%)</label>
+        <input id="c4" class="inp n is-warn" type="number" value="150">
+        <span class="msg warn">범위 밖이나 계산은 유효</span>
+      </div>
+      <div class="field">
+        <label for="c5">Disabled — 철 밀도</label>
+        <input id="c5" class="inp n" type="number" value="7.85" disabled>
+        <span class="msg">편집 불가 고정 상수</span>
+      </div>
+      <div class="field">
+        <label for="c6">Select + Readonly 표기</label>
+        <select id="c6" class="inp">
+          <option>NAK80</option><option>P20</option><option>H13 / 1.2344</option>
+        </select>
+        <span class="msg">5,500원/kg · 마스터 연동</span>
+      </div>
+    </div>
+    <div class="hint">숫자 입력 공통: <code>type="number"</code>, <code>inputmode="decimal"</code>, 우측 정렬. 단위는 필드 밖 라벨에 표기해 값과 섞이지 않게 한다.</div>
+
+    <h3 class="sub">4.3 경고 표시</h3>
+    <div class="alert warn"><span class="ico" aria-hidden="true">⚠</span><span class="msg">마진율이 음수입니다. 원가 이하 견적이 됩니다.</span></div>
+    <div class="alert err"><span class="ico" aria-hidden="true">⛔</span><span class="msg">최종 견적가가 0원 이하입니다.</span></div>
+    <div class="hint">배경 amber-50 / red-50, 좌측 4px 컬러 바, 아이콘 + 문장. <b>경고 0건이면 영역 자체를 숨긴다</b> — 빈 박스를 남기지 않는다.</div>
+
+    <h3 class="sub">4.4 토스트</h3>
+    <div class="toast ok">마스터 단가를 저장했습니다</div>
+    <div class="toast warn">고객사명을 입력하세요</div>
+    <div class="toast err">브라우저에 저장할 수 없습니다</div>
+    <div class="hint">우측 하단 24px 여백 · 최소 폭 280px · 3초 후 자동 소멸(fade 200ms) · 최대 3개 위로 적층</div>
+
+    <h3 class="sub">4.5 아이콘</h3>
+    <div class="card">
+      <div class="icon-row">
+        <div class="icon-set">🛠 ⚙ 🗂 🖨 💾 📊 ⚠ ⛔ ✅ ✕</div>
+      </div>
+      <div class="hint">별도 아이콘 라이브러리를 추가하지 않고 유니코드 이모지를 쓴다. 아이콘 10개를 위해 수백 KB의 폰트나 SVG 스프라이트를 CDN에서 더 받는 것은 단일 파일 배포와 오프라인 대응에 부담만 준다. 이모지는 이미 OS에 있다.</div>
+    </div>
+  </section>
+
+  <!-- ══════════ SCR-01 ══════════ -->
+  <section class="panel" role="tabpanel" id="panel-scr01" aria-labelledby="tab-scr01" tabindex="0" hidden>
+    <h2 class="sec">SCR-01 견적 시뮬레이터</h2>
+    <p class="sec-sub">메인 화면 · 좌측 입력 / 우측 결과 2컬럼 · 결과 패널 sticky</p>
+    <p class="mock-note">금액은 손계산 확정값 T1 기준 (400×400×350 · NAK80 · 캐비티 2 · 복잡도 일반 · 마진 25%). 경고 0건 상태이므로 경고 영역은 표시되지 않는다.</p>
+
+    <div class="mock-wrap">
+      <div class="app">
+        <div class="app-card">
+          <div class="app-head">
+            <div>
+              <h1>🛠 사출금형 견적 시뮬레이터</h1>
+              <div class="s">외부 전송 없는 브라우저 내부 연산 독립형 시스템</div>
+            </div>
+            <div class="acts">
+              <button type="button" class="btn btn-secondary">⚙ 단가설정</button>
+              <button type="button" class="btn btn-secondary">🗂 이력</button>
+              <button type="button" class="btn btn-secondary">🖨 출력</button>
+            </div>
+          </div>
+
+          <div class="app-body">
+            <div class="app-left">
+
+              <div class="isec">
+                <div class="h"><span>A. 견적 정보</span></div>
+                <div class="g2">
+                  <div class="field"><label for="a-cust">고객사명</label><input id="a-cust" class="inp" type="text" value="A정밀(주)"></div>
+                  <div class="field"><label for="a-proj">프로젝트 / 품명</label><input id="a-proj" class="inp" type="text" value="커버 상형"></div>
+                  <div class="field"><label for="a-date">견적일</label><input id="a-date" class="inp" type="date" value="2026-09-18"></div>
+                  <div class="field"><label for="a-valid">유효기간 (일)</label><input id="a-valid" class="inp n" type="number" value="30"></div>
+                </div>
+              </div>
+
+              <div class="isec">
+                <div class="h"><span>B. 금형 사이즈 및 강재</span></div>
+                <div class="g3">
+                  <div class="field"><label for="b-l">가로 (L, mm)</label><input id="b-l" class="inp n" type="number" value="400"></div>
+                  <div class="field"><label for="b-w">세로 (W, mm)</label><input id="b-w" class="inp n" type="number" value="400"></div>
+                  <div class="field"><label for="b-t">두께 (T, mm)</label><input id="b-t" class="inp n" type="number" value="350"></div>
+                </div>
+                <div class="g2">
+                  <div class="field">
+                    <label for="b-steel">강재 종류</label>
+                    <select id="b-steel" class="inp"><option>NAK80</option><option>P20</option><option>H13 / 1.2344</option></select>
+                    <span class="msg">5,500원/kg · 마스터 연동</span>
+                  </div>
+                  <div class="field">
+                    <label for="b-cav">캐비티 수</label>
+                    <input id="b-cav" class="inp n" type="number" value="2">
+                    <span class="msg">가공 공수 계수 ×1.15</span>
+                  </div>
+                </div>
+              </div>
+
+              <div class="isec">
+                <div class="h"><span>C. 공정별 소요 시간</span><span class="sum">합계 120 hr</span></div>
+                <div class="g2">
+                  <div class="field"><label for="c-des">설계 / CAD (hr)</label><input id="c-des" class="inp n" type="number" value="20"><span class="msg">35,000원/hr</span></div>
+                  <div class="field"><label for="c-cnc">CNC 고속가공 (hr)</label><input id="c-cnc" class="inp n" type="number" value="45"><span class="msg">50,000원/hr</span></div>
+                  <div class="field"><label for="c-edm">방전 가공 (hr)</label><input id="c-edm" class="inp n" type="number" value="30"><span class="msg">40,000원/hr</span></div>
+                  <div class="field"><label for="c-asm">사상 및 조립 (hr)</label><input id="c-asm" class="inp n" type="number" value="25"><span class="msg">30,000원/hr</span></div>
+                </div>
+              </div>
+
+              <div class="isec">
+                <div class="h"><span>D. 언더컷 기구 및 비즈니스 조건</span></div>
+                <div class="g3">
+                  <div class="field"><label for="d-slide">슬라이드 코어 (개)</label><input id="d-slide" class="inp n" type="number" value="1"></div>
+                  <div class="field"><label for="d-lift">경사핀 / 리프터 (개)</label><input id="d-lift" class="inp n" type="number" value="2"></div>
+                  <div class="field">
+                    <label for="d-cx">형상 복잡도</label>
+                    <select id="d-cx" class="inp"><option>일반 (×1.0)</option><option>복잡 (×1.2)</option><option>초정밀 (×1.5)</option></select>
+                  </div>
+                </div>
+                <div class="g2">
+                  <div class="field">
+                    <label for="d-hot">핫러너 시스템</label>
+                    <select id="d-hot" class="inp"><option>콜드러너 (0원)</option><option>핫러너 1-Drop (+2,500,000원)</option><option>핫러너 2-Drop (+4,500,000원)</option></select>
+                  </div>
+                  <div class="field"><label for="d-mar">목표 마진율 (%)</label><input id="d-mar" class="inp n" type="number" value="25"></div>
+                </div>
+              </div>
+
+            </div>
+
+            <div class="app-right">
+              <div class="res-title">📊 실시간 견적 시뮬레이션 결과</div>
+              <div class="res-list">
+                <div class="res-row"><span class="k">계산된 금형 예상 중량</span><span class="v">439.6 kg</span></div>
+                <div class="res-row"><span class="k">순수 재료비 합계</span><span class="v">2,609,800 원</span></div>
+                <div class="res-row"><span class="k">총 가공 공정비</span><span class="v">5,635,000 원</span></div>
+                <div class="res-row"><span class="k">슬라이드 / 기구 가공비</span><span class="v">2,400,000 원</span></div>
+                <div class="res-row"><span class="k">시사출 및 조정비</span><span class="v">500,000 원</span></div>
+                <div class="res-row rule"><span class="k">순수 금형 제조원가</span><span class="v">11,144,800 원</span></div>
+                <div class="res-row"><span class="k">설정 마진 금액 (25%)</span><span class="v">2,786,200 원</span></div>
+                <div class="res-row"><span class="k">일반관리비</span><span class="v">0 원</span></div>
+              </div>
+              <div class="res-foot">
+                <div class="res-final"><span class="k">최종 확정 견적가</span><span class="v">13,931,000</span></div>
+                <div class="res-vat">원 · 부가가치세 별도</div>
+                <div class="res-btns">
+                  <button type="button" class="btn-save">💾 견적 저장</button>
+                  <button type="button" class="btn-print">🖨 확정 견적서 출력</button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="app-foot">본 견적은 표준 산출식에 의한 참고용 추정 견적입니다. 모든 데이터는 이 브라우저에만 저장되며 외부로 전송되지 않습니다.</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ══════════ SCR-02 ══════════ -->
+  <section class="panel" role="tabpanel" id="panel-scr02" aria-labelledby="tab-scr02" tabindex="0" hidden>
+    <h2 class="sec">SCR-02 마스터 단가 설정</h2>
+    <p class="sec-sub">모달 · 탭 4개 · 저장 시 현재 견적 즉시 재계산</p>
+
+    <div class="mock-wrap">
+      <div class="dim">
+        <div class="modal">
+          <div class="modal-head">
+            <div class="t">⚙ 마스터 단가 설정</div>
+            <button type="button" class="modal-x" aria-label="닫기">✕</button>
+          </div>
+          <div class="modal-tabs">
+            <span class="on">강재단가</span><span>공정임율</span><span>기구 · 계수</span><span>공급자 · 백업</span>
+          </div>
+          <div class="modal-body">
+            <div class="mrow"><label for="m1">P20</label><input id="m1" class="inp n" type="number" value="3500"><span class="unit">원 / kg</span></div>
+            <div class="mrow"><label for="m2">NAK80</label><input id="m2" class="inp n is-focus" type="number" value="5500"><span class="unit">원 / kg</span><span class="tag">현재 견적에 사용 중</span></div>
+            <div class="mrow"><label for="m3">H13 / 1.2344</label><input id="m3" class="inp n" type="number" value="8000"><span class="unit">원 / kg</span></div>
+            <div class="mrow"><label for="m4" style="color:#94A3B8">철 밀도 (고정 상수)</label><input id="m4" class="inp n" type="number" value="7.85" disabled><span class="unit">g / cm³ · 편집 불가</span></div>
+            <div class="info"><span aria-hidden="true">ⓘ</span><span>변경 사항은 현재 작성 중인 견적에 즉시 반영되며, 저장된 과거 이력의 금액은 바뀌지 않습니다. 이력은 제출 당시 확정 금액을 그대로 보존합니다.</span></div>
+          </div>
+          <div class="modal-foot">
+            <button type="button" class="btn btn-danger">기본값으로 초기화</button>
+            <div style="display:flex;gap:10px">
+              <button type="button" class="btn btn-ghost">취소</button>
+              <button type="button" class="btn btn-primary" style="padding:11px 18px">저장하고 적용</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <h3 class="sub">탭 구성</h3>
+    <table class="spec">
+      <thead><tr><th>탭</th><th>포함 항목</th></tr></thead>
+      <tbody>
+        <tr><td>강재단가</td><td>P20 / NAK80 / H13 kg당 단가</td></tr>
+        <tr><td>공정임율</td><td>설계 / CNC / 방전 / 사상조립 시간당 임율</td></tr>
+        <tr><td>기구 · 계수</td><td>슬라이드·경사핀 개당 단가, 시사출비, 일반관리비, 몰드베이스 계수, 캐비티 계수, 복잡도 3단계 배수, 핫러너 3종 금액</td></tr>
+        <tr><td>공급자 · 백업</td><td>상호·주소·연락처·담당자 / JSON 내보내기 · 가져오기</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <!-- ══════════ SCR-03 ══════════ -->
+  <section class="panel" role="tabpanel" id="panel-scr03" aria-labelledby="tab-scr03" tabindex="0" hidden>
+    <h2 class="sec">SCR-03 견적 이력</h2>
+    <p class="sec-sub">모달 · 최신순 · 최근 50건 FIFO</p>
+
+    <div class="mock-wrap">
+      <div class="dim">
+        <div class="modal">
+          <div class="modal-head">
+            <div><span class="t">🗂 견적 이력</span><span class="c">24 / 50 건</span></div>
+            <button type="button" class="modal-x" aria-label="닫기">✕</button>
+          </div>
+          <div class="hist-head">
+            <span class="h-date">저장일시</span><span class="h-no">문서번호</span><span class="h-cust">고객사</span>
+            <span class="h-proj">프로젝트</span><span class="h-amt">최종가</span><span class="h-act"></span>
+          </div>
+          <div class="hist-row on">
+            <span class="h-date">2026-09-18 14:22</span><span class="h-no">Q-20260918-02</span><span class="h-cust">A정밀(주)</span>
+            <span class="h-proj">커버 상형</span><span class="h-amt">13,931,000</span>
+            <span class="h-act"><button type="button" class="btn-xs">불러오기</button><button type="button" class="btn-xs dang">삭제</button></span>
+          </div>
+          <div class="hist-row">
+            <span class="h-date">2026-09-17 09:10</span><span class="h-no">Q-20260917-01</span><span class="h-cust">B테크</span>
+            <span class="h-proj">하우징 하형 · 2캐비티</span><span class="h-amt">28,412,500</span>
+            <span class="h-act"><button type="button" class="btn-xs">불러오기</button><button type="button" class="btn-xs dang">삭제</button></span>
+          </div>
+          <div class="hist-row">
+            <span class="h-date">2026-09-15 16:48</span><span class="h-no">Q-20260915-03</span><span class="h-cust">C몰드</span>
+            <span class="h-proj">브래킷 · 초정밀</span><span class="h-amt">17,452,875</span>
+            <span class="h-act"><button type="button" class="btn-xs">불러오기</button><button type="button" class="btn-xs dang">삭제</button></span>
+          </div>
+          <div style="padding:16px 22px">
+            <div class="alert warn" style="margin:0">
+              <span class="ico" aria-hidden="true">⚠</span>
+              <span class="msg" style="font-weight:400">불러온 견적은 <b>현재 마스터 단가로 재계산</b>됩니다. 금액이 달라지면 &ldquo;저장 당시 13,931,000원 / 현재 기준 14,208,300원&rdquo;처럼 두 값을 함께 표시합니다.</span>
+            </div>
+          </div>
+          <div class="modal-foot" style="justify-content:flex-start">
+            <span style="font-size:11px;color:#94A3B8">최신순 정렬 · 50건 초과 시 가장 오래된 항목 자동 제거 · 삭제는 되돌릴 수 없어 확인 대화를 거칩니다</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ══════════ SCR-04 ══════════ -->
+  <section class="panel" role="tabpanel" id="panel-scr04" aria-labelledby="tab-scr04" tabindex="0" hidden>
+    <h2 class="sec">SCR-04 견적서 출력 뷰</h2>
+    <p class="sec-sub">인쇄 전용 · A4 1페이지 · <code>window.print()</code> 방식 (D-01)</p>
+    <p class="mock-note">794 × 1123px = A4 96dpi 실측 크기. 이 탭에서 <kbd>Ctrl</kbd>+<kbd>P</kbd>를 누르면 아래 견적서만 인쇄된다.</p>
+
+    <div class="mock-wrap">
+      <div class="a4">
+        <div class="q-title">견 적 서</div>
+
+        <div class="q-meta">
+          <div>문서번호: Q-20260918-02</div>
+          <div class="r"><div>견적일: 2026-09-18</div><div>유효기간: 2026-10-18 까지</div></div>
+        </div>
+
+        <div class="q-parties">
+          <div class="q-box">
+            <div class="bh">수 요 자</div>
+            <div class="bb">
+              <div><span class="k">고객사</span><span>A정밀(주)</span></div>
+              <div><span class="k">프로젝트</span><span>커버 상형</span></div>
+              <div><span class="k">담당</span><span>[담당자명]</span></div>
+            </div>
+          </div>
+          <div class="q-box">
+            <div class="bh">공 급 자</div>
+            <div class="bb">
+              <div><span class="k">상호</span><span>[귀사 상호]</span></div>
+              <div><span class="k">연락처</span><span>[대표 전화]</span></div>
+              <div><span class="k">담당자</span><span style="flex:1 1 auto">[견적 담당자]</span><span class="seal">(인)</span></div>
+            </div>
+          </div>
+        </div>
+
+        <div>
+          <div class="q-h">■ 금형 사양</div>
+          <div class="q-spec">
+            <span>치수 <b class="num">400 × 400 × 350</b> mm</span>
+            <span>강재 <b>NAK80</b></span>
+            <span>예상 중량 <b class="num">439.6</b> kg</span>
+            <span>캐비티 <b class="num">2</b></span>
+            <span>복잡도 <b>일반</b></span>
+            <span>슬라이드 <b class="num">1</b> 개</span>
+            <span>경사핀 <b class="num">2</b> 개</span>
+            <span>러너 <b>콜드러너</b></span>
+          </div>
+        </div>
+
+        <div>
+          <div style="display:flex;justify-content:space-between;align-items:baseline">
+            <div class="q-h">■ 견적 내역</div>
+            <div style="font-size:10px;color:#64748B">단위: 원</div>
+          </div>
+          <div class="q-table">
+            <div class="tr th"><span class="c-no">No</span><span class="c-item">항목</span><span class="c-amt" style="color:#fff">금액</span></div>
+            <div class="tr"><span class="c-no">1</span><span class="c-item">재료비 — 강재, 몰드베이스 포함</span><span class="c-amt">2,609,800</span></div>
+            <div class="tr zebra"><span class="c-no">2</span><span class="c-item">가공비 — 설계, CNC, 방전, 사상 및 조립</span><span class="c-amt">5,635,000</span></div>
+            <div class="tr"><span class="c-no">3</span><span class="c-item">기구 가공비 — 슬라이드 코어, 경사핀</span><span class="c-amt">2,400,000</span></div>
+            <div class="tr zebra"><span class="c-no">4</span><span class="c-item">시사출 및 조정비</span><span class="c-amt">500,000</span></div>
+            <div class="tr sumline"><span class="c-no"></span><span class="c-item">제조원가 소계</span><span class="c-amt" style="font-weight:600">11,144,800</span></div>
+            <div class="tr"><span class="c-no"></span><span class="c-item">목표 마진 (25%)</span><span class="c-amt">2,786,200</span></div>
+            <div class="tr"><span class="c-no"></span><span class="c-item">일반관리비</span><span class="c-amt">0</span></div>
+            <div class="tr grand"><span class="c-no"></span><span class="c-item">합계 (부가세 별도)</span><span class="c-amt">13,931,000</span></div>
+          </div>
+        </div>
+
+        <div>
+          <div class="q-h">■ 특기 사항</div>
+          <div class="q-terms">
+            <div>· 본 견적은 표준 산출식에 의한 참고용 추정 견적이며, 최종 계약가와 다를 수 있습니다.</div>
+            <div>· 금액은 부가가치세 별도입니다.</div>
+            <div>· 납기 및 지불 조건은 별도 협의합니다.</div>
+            <div>· 사양 변경 시 견적 금액은 재산출됩니다.</div>
+          </div>
+        </div>
+
+        <div class="q-foot">
+          <div class="n">A4 세로 · 여백 15mm · 1페이지 수납<br>화면 UI는 @media print에서 전부 숨김</div>
+          <div class="signs">
+            <div class="sign"><span class="l">작성</span><span class="line"></span></div>
+            <div class="sign"><span class="l">검토</span><span class="line"></span></div>
+            <div class="sign"><span class="l">승인</span><span class="line"></span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <h3 class="sub">인쇄 규칙</h3>
+    <table class="spec">
+      <thead><tr><th>ID</th><th>규칙</th></tr></thead>
+      <tbody>
+        <tr><td>P-1</td><td>A4 세로, 여백 15mm, 1페이지에 수납</td></tr>
+        <tr><td>P-2</td><td>배경색·딤·그림자 제거 (잉크 절약 및 가독성)</td></tr>
+        <tr><td>P-3</td><td>화면 UI 요소는 <code>.no-print</code>로 전부 숨김</td></tr>
+        <tr><td>P-4</td><td>금액은 우측 정렬, 천 단위 구분</td></tr>
+        <tr><td>P-5</td><td><b>고지 문구는 어떤 조건에서도 생략되지 않음</b></td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <!-- ══════════ 5. 접근성 ══════════ -->
+  <section class="panel" role="tabpanel" id="panel-a11y" aria-labelledby="tab-a11y" tabindex="0" hidden>
+    <h2 class="sec">5. 접근성 체크</h2>
+    <p class="sec-sub">설계 단계에서 확정한 항목 · 구현 시 7번 문서의 TC로 검증한다</p>
+
+    <div class="a11y-grid">
+      <div class="a11y"><div class="t">색 대비</div><div class="s">AA 4.5:1 이상. 실사용 6개 조합을 전부 검증했고 최저가 4.8:1이다.</div><div class="ok">✅ 컬러 탭에서 확인</div></div>
+      <div class="a11y"><div class="t">색 의존 금지</div><div class="s">경고는 색 외에 아이콘과 문장을 함께 제공한다. 적록색약 사용자도 구분할 수 있다.</div><div class="ok">✅ 컴포넌트 탭 4.3</div></div>
+      <div class="a11y"><div class="t">라벨 연결</div><div class="s">모든 입력에 <code>label for</code>를 연결해 스크린리더가 필드 용도를 읽는다.</div><div class="ok">✅ 전 목업 적용</div></div>
+      <div class="a11y"><div class="t">포커스 표시</div><div class="s"><code>ring-2 ring-emerald-400 ring-offset-2</code>로 키보드 사용자에게 현재 위치를 명확히 표시한다.</div><div class="ok">✅ 컴포넌트 탭 4.1</div></div>
+      <div class="a11y"><div class="t">동적 변경 알림</div><div class="s">결과 패널에 <code>aria-live="polite"</code>를 적용해 계산 결과 변경을 읽어준다.</div><div class="ok">✅ 설계 확정</div></div>
+      <div class="a11y"><div class="t">키보드 조작</div><div class="s">마우스 없이 전 기능 사용 가능. Tab 순서는 헤더 → 좌측 입력 순이며 모달은 ESC로 닫는다.</div><div class="ok">✅ 설계 확정</div></div>
+      <div class="a11y"><div class="t">터치 영역</div><div class="s">최소 40 × 40px. 버튼은 <code>py-2</code> 이상을 유지한다.</div><div class="ok">✅ 컴포넌트 탭 4.1</div></div>
+      <div class="a11y"><div class="t">실제 시맨틱 요소</div><div class="s">정적 목업에서도 div가 아닌 진짜 <code>button</code>·<code>a</code>·<code>input</code>을 쓴다. div로 버튼을 흉내내면 Tab이 건너뛴다.</div><div class="ok">✅ 전 목업 적용</div></div>
+    </div>
+
+    <h3 class="sub">반응형 기준</h3>
+    <table class="spec">
+      <thead><tr><th>구간</th><th>대상</th><th>레이아웃</th></tr></thead>
+      <tbody>
+        <tr><td>1280px 이상</td><td>데스크톱 (주 대상)</td><td>2컬럼. 좌측 입력 58% / 우측 결과 42% sticky</td></tr>
+        <tr><td>1024 ~ 1279px</td><td>노트북 1366×768</td><td>2컬럼 유지, 간격·폰트 축소, 가로 스크롤 없음</td></tr>
+        <tr><td>768 ~ 1023px</td><td>태블릿</td><td>1컬럼. 결과 패널이 입력 아래로, 최종가만 하단 고정</td></tr>
+        <tr><td>767px 이하</td><td>모바일</td><td>1컬럼 적층. <b>정식 지원 범위 아님</b> — 깨지지 않는 수준만 보장</td></tr>
+        <tr><td>인쇄</td><td>A4</td><td>SCR-04만 표시</td></tr>
+      </tbody>
+    </table>
+
+    <div class="note" style="margin-top:20px">
+      <b>왜 데스크톱 우선인가</b> — 실제 사용자는 사무실 PC 앞에서 도면을 보며 치수를 입력한다. 모바일에서 18개 항목을 입력하는 시나리오는 존재하지 않는다. 모바일에 개발 시간을 쓰는 대신 계산 정확도와 출력 품질에 쓴다.
+    </div>
+  </section>
+
+</div>
+
+<script>
+(function () {
+  var list = document.querySelector('[role="tablist"]');
+  var tabs = Array.prototype.slice.call(document.querySelectorAll('[role="tab"]'));
+  var ids = tabs.map(function (t) { return t.dataset.tab; });
+
+  function select(id, focus) {
+    if (ids.indexOf(id) === -1) { id = ids[0]; }
+    tabs.forEach(function (t) {
+      var on = t.dataset.tab === id;
+      t.setAttribute('aria-selected', on ? 'true' : 'false');
+      t.tabIndex = on ? 0 : -1;
+      if (on && focus) { t.focus(); }
+    });
+    ids.forEach(function (x) {
+      document.getElementById('panel-' + x).hidden = (x !== id);
+    });
+    if (history.replaceState) {
+      history.replaceState(null, '', '#' + id);
+    } else {
+      location.hash = id;
+    }
+  }
+
+  tabs.forEach(function (t) {
+    t.addEventListener('click', function () { select(t.dataset.tab, false); });
+  });
+
+  // 좌우 화살표 / Home / End 로 탭 이동
+  list.addEventListener('keydown', function (e) {
+    var cur = ids.indexOf(document.querySelector('[aria-selected="true"]').dataset.tab);
+    var next = -1;
+    if (e.key === 'ArrowRight') { next = (cur + 1) % ids.length; }
+    else if (e.key === 'ArrowLeft') { next = (cur - 1 + ids.length) % ids.length; }
+    else if (e.key === 'Home') { next = 0; }
+    else if (e.key === 'End') { next = ids.length - 1; }
+    if (next !== -1) { e.preventDefault(); select(ids[next], true); }
+  });
+
+  select((location.hash || '').replace('#', ''), false);
+})();
+</script>
+</body>
+</html>
