@@ -1,0 +1,727 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>사출금형 견적 시뮬레이터 시스템</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* D-01: PDF 라이브러리 대신 브라우저 인쇄(@media print) 사용 — 한글 폰트 깨짐·의존성 없음 */
+        @media print {
+            body * { visibility: hidden; }
+            #printArea, #printArea * { visibility: visible; }
+            #printArea { position: absolute; top: 0; left: 0; width: 100%; padding: 20px; }
+        }
+        #printArea { display: none; }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800 p-6">
+    <div class="max-w-6xl mx-auto bg-white p-8 rounded-xl shadow-md border border-slate-200">
+        <!-- 헤더 -->
+        <div class="border-b border-slate-200 pb-4 mb-6">
+            <h1 class="text-2xl font-bold text-slate-900">🛠️ 사출금형 견적 시뮬레이션 & 자동 생성기</h1>
+            <p class="text-sm text-slate-500 mt-1">외부 유출 없는 순수 브라우저 연산 독립형 시스템</p>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            <!-- 왼쪽: 입력 및 시뮬레이션 컨트롤 -->
+            <div class="space-y-6">
+                <!-- 0. 견적서 기본 정보 -->
+                <div class="bg-slate-50 p-4 rounded-lg border border-slate-200">
+                    <h2 class="text-lg font-semibold text-slate-700 mb-3">0. 견적서 기본 정보</h2>
+                    <div class="grid grid-cols-2 gap-3 mb-3">
+                        <div>
+                            <label class="block text-xs font-medium text-slate-500 mb-1">고객사명</label>
+                            <input type="text" id="customerName" placeholder="예: 대한전자(주)" class="w-full p-2 border rounded bg-white text-sm" oninput="calculateQuote()">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-slate-500 mb-1">프로젝트명</label>
+                            <input type="text" id="projectName" placeholder="예: 도어트림 사출금형" class="w-full p-2 border rounded bg-white text-sm" oninput="calculateQuote()">
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-2 gap-3">
+                        <div>
+                            <label class="block text-xs font-medium text-slate-500 mb-1">견적일</label>
+                            <input type="date" id="quoteDate" class="w-full p-2 border rounded bg-white text-sm" oninput="calculateQuote()">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-slate-500 mb-1">유효기간 (일)</label>
+                            <input type="number" id="validDays" value="30" min="0" class="w-full p-2 border rounded bg-white text-sm" oninput="calculateQuote()">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 1. 기본 정보 및 강재 계산 -->
+                <div class="bg-slate-50 p-4 rounded-lg border border-slate-200">
+                    <h2 class="text-lg font-semibold text-slate-700 mb-3">1. 금형 사이즈 및 강재 설정</h2>
+                    <div class="grid grid-cols-3 gap-3 mb-3">
+                        <div>
+                            <label class="block text-xs font-medium text-slate-500 mb-1">가로 (L, mm)</label>
+                            <input type="number" id="length" value="400" min="0" class="w-full p-2 border rounded bg-white text-sm" oninput="calculateQuote()">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-slate-500 mb-1">세로 (W, mm)</label>
+                            <input type="number" id="width" value="400" min="0" class="w-full p-2 border rounded bg-white text-sm" oninput="calculateQuote()">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-slate-500 mb-1">두께 (T, mm)</label>
+                            <input type="number" id="thickness" value="350" min="0" class="w-full p-2 border rounded bg-white text-sm" oninput="calculateQuote()">
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-2 gap-3">
+                        <div>
+                            <label class="block text-xs font-medium text-slate-500 mb-1">강재 종류 (kg당 단가)</label>
+                            <select id="steelType" class="w-full p-2 border rounded bg-white text-sm" onchange="calculateQuote()"></select>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-slate-500 mb-1">캐비티 수 (Cavity)</label>
+                            <input type="number" id="cavities" value="2" min="1" class="w-full p-2 border rounded bg-white text-sm" oninput="calculateQuote()">
+                        </div>
+                    </div>
+                    <div class="mt-3">
+                        <label class="block text-xs font-medium text-slate-500 mb-1">형상 복잡도</label>
+                        <select id="complexity" class="w-full p-2 border rounded bg-white text-sm" onchange="calculateQuote()"></select>
+                    </div>
+                </div>
+
+                <!-- 2. 공정별 가공 시간 설정 -->
+                <div class="bg-slate-50 p-4 rounded-lg border border-slate-200">
+                    <h2 class="text-lg font-semibold text-slate-700 mb-3">2. 공정별 예상 소요 시간 (Hour)</h2>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-xs font-medium text-slate-500 mb-1" id="labelDesign">설계/CAD</label>
+                            <input type="number" id="tDesign" value="20" min="0" class="w-full p-2 border rounded bg-white text-sm" oninput="calculateQuote()">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-slate-500 mb-1" id="labelCnc">CNC 고속가공</label>
+                            <input type="number" id="tCnc" value="45" min="0" class="w-full p-2 border rounded bg-white text-sm" oninput="calculateQuote()">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-slate-500 mb-1" id="labelEdm">방전 가공</label>
+                            <input type="number" id="tEdm" value="30" min="0" class="w-full p-2 border rounded bg-white text-sm" oninput="calculateQuote()">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-slate-500 mb-1" id="labelAssembly">사상 및 조립</label>
+                            <input type="number" id="tAssembly" value="25" min="0" class="w-full p-2 border rounded bg-white text-sm" oninput="calculateQuote()">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 3. 특수 기구물 및 비즈니스 조건 -->
+                <div class="bg-slate-50 p-4 rounded-lg border border-slate-200">
+                    <h2 class="text-lg font-semibold text-slate-700 mb-3">3. 언더컷 기구 및 비즈니스 조건</h2>
+                    <div class="grid grid-cols-2 gap-4 mb-3">
+                        <div>
+                            <label class="block text-xs font-medium text-slate-500 mb-1">슬라이드 코어 개수</label>
+                            <input type="number" id="slideCount" value="1" min="0" class="w-full p-2 border rounded bg-white text-sm" oninput="calculateQuote()">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-slate-500 mb-1">경사핀(Lifter) 개수</label>
+                            <input type="number" id="lifterCount" value="2" min="0" class="w-full p-2 border rounded bg-white text-sm" oninput="calculateQuote()">
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-xs font-medium text-slate-500 mb-1">핫러너 시스템 적용</label>
+                            <select id="hotRunner" class="w-full p-2 border rounded bg-white text-sm" onchange="calculateQuote()">
+                                <option value="0" selected>콜드러너 (0원)</option>
+                                <option value="2500000">핫러너 1-Drop (+2.5M)</option>
+                                <option value="4500000">핫러너 2-Drop (+4.5M)</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-slate-500 mb-1">목표 마진율 (%)</label>
+                            <input type="number" id="marginRate" value="25" min="0" class="w-full p-2 border rounded bg-white text-sm" oninput="calculateQuote()">
+                        </div>
+                    </div>
+                    <div class="mt-3">
+                        <label class="block text-xs font-medium text-slate-500 mb-1">일반관리비 (원)</label>
+                        <input type="number" id="overhead" value="0" min="0" class="w-full p-2 border rounded bg-white text-sm" oninput="calculateQuote()">
+                    </div>
+                </div>
+            </div>
+
+            <!-- 오른쪽: 실시간 견적 리포트 -->
+            <div class="flex flex-col justify-between border border-slate-200 rounded-lg p-6 bg-slate-900 text-slate-100">
+                <div>
+                    <h2 class="text-xl font-bold text-teal-400 mb-6 border-b border-slate-700 pb-2">📊 실시간 견적 시뮬레이션 결과</h2>
+
+                    <div class="space-y-4 text-sm">
+                        <div class="flex justify-between">
+                            <span class="text-slate-400">계산된 금형 예상 중량:</span>
+                            <span class="font-mono font-semibold" id="resWeight">0 kg</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-slate-400">순수 재료비 합계:</span>
+                            <span class="font-mono" id="resMaterial">0 원</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-slate-400">총 가공 공정비:</span>
+                            <span class="font-mono" id="resMachining">0 원</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-slate-400">슬라이드/기구 가공비:</span>
+                            <span class="font-mono" id="resMechanism">0 원</span>
+                        </div>
+                        <div class="flex justify-between border-t border-slate-700 pt-3">
+                            <span class="text-slate-400">순수 금형 제조원가:</span>
+                            <span class="font-mono text-amber-300 font-semibold" id="resTotalCost">0 원</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-slate-400">설정 마진 금액 (이익금):</span>
+                            <span class="font-mono" id="resMarginProfit">0 원</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 최종 금액 확정부 -->
+                <div class="mt-8 border-t-2 border-dashed border-slate-700 pt-6">
+                    <div class="flex justify-between items-baseline mb-6">
+                        <span class="text-lg font-bold text-white">최종 확정 견적가</span>
+                        <span class="text-3xl font-mono font-black text-emerald-400" id="resFinalPrice">0 원</span>
+                    </div>
+                    <button onclick="window.print()" class="w-full bg-emerald-500 hover:bg-emerald-600 text-slate-900 font-bold py-3 px-4 rounded-lg transition-all duration-150 cursor-pointer shadow-lg text-center block">
+                        🖨️ 확정 견적서 인쇄 / PDF로 저장
+                    </button>
+                    <p class="text-xs text-slate-500 text-center mt-2">인쇄 대화상자에서 "대상: PDF로 저장"을 선택하면 PDF 파일로 저장됩니다.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- 4. 견적 이력 -->
+        <div class="bg-slate-50 p-4 rounded-lg border border-slate-200 mt-8">
+            <div class="flex justify-between items-center mb-3">
+                <h2 class="text-lg font-semibold text-slate-700">4. 견적 이력 (최근 50건, 이 브라우저에만 저장)</h2>
+                <button onclick="saveQuoteToHistory()" class="text-sm bg-slate-700 hover:bg-slate-800 text-white px-3 py-1.5 rounded">현재 견적 저장</button>
+            </div>
+            <div id="historyList" class="space-y-2 text-sm text-slate-500">이력이 없습니다.</div>
+        </div>
+
+        <!-- 5. 마스터 데이터 관리 -->
+        <details class="bg-slate-50 p-4 rounded-lg border border-slate-200 mt-4">
+            <summary class="text-lg font-semibold text-slate-700 cursor-pointer">5. 마스터 데이터 관리 (단가·임율 편집)</summary>
+            <div class="mt-4 space-y-4">
+                <div>
+                    <h3 class="text-sm font-semibold text-slate-600 mb-2">강재 단가 (원/kg)</h3>
+                    <div class="grid grid-cols-3 gap-3">
+                        <div><label class="block text-xs text-slate-500 mb-1">P20</label><input type="number" min="0" id="masterSteelP20" class="w-full p-2 border rounded bg-white text-sm"></div>
+                        <div><label class="block text-xs text-slate-500 mb-1">NAK80</label><input type="number" min="0" id="masterSteelNAK80" class="w-full p-2 border rounded bg-white text-sm"></div>
+                        <div><label class="block text-xs text-slate-500 mb-1">H13</label><input type="number" min="0" id="masterSteelH13" class="w-full p-2 border rounded bg-white text-sm"></div>
+                    </div>
+                </div>
+                <div>
+                    <h3 class="text-sm font-semibold text-slate-600 mb-2">공정 임율 (원/hr)</h3>
+                    <div class="grid grid-cols-4 gap-3">
+                        <div><label class="block text-xs text-slate-500 mb-1">설계/CAD</label><input type="number" min="0" id="masterRateDesign" class="w-full p-2 border rounded bg-white text-sm"></div>
+                        <div><label class="block text-xs text-slate-500 mb-1">CNC</label><input type="number" min="0" id="masterRateCnc" class="w-full p-2 border rounded bg-white text-sm"></div>
+                        <div><label class="block text-xs text-slate-500 mb-1">방전</label><input type="number" min="0" id="masterRateEdm" class="w-full p-2 border rounded bg-white text-sm"></div>
+                        <div><label class="block text-xs text-slate-500 mb-1">사상/조립</label><input type="number" min="0" id="masterRateAssembly" class="w-full p-2 border rounded bg-white text-sm"></div>
+                    </div>
+                </div>
+                <div>
+                    <h3 class="text-sm font-semibold text-slate-600 mb-2">기타 단가·계수</h3>
+                    <div class="grid grid-cols-3 gap-3">
+                        <div><label class="block text-xs text-slate-500 mb-1">몰드베이스 계수</label><input type="number" min="0" step="0.01" id="masterMoldBaseFactor" class="w-full p-2 border rounded bg-white text-sm"></div>
+                        <div><label class="block text-xs text-slate-500 mb-1">슬라이드 단가 (원)</label><input type="number" min="0" id="masterSlideUnit" class="w-full p-2 border rounded bg-white text-sm"></div>
+                        <div><label class="block text-xs text-slate-500 mb-1">경사핀 단가 (원)</label><input type="number" min="0" id="masterLifterUnit" class="w-full p-2 border rounded bg-white text-sm"></div>
+                        <div><label class="block text-xs text-slate-500 mb-1">시사출비 (원)</label><input type="number" min="0" id="masterTrialRun" class="w-full p-2 border rounded bg-white text-sm"></div>
+                        <div><label class="block text-xs text-slate-500 mb-1">캐비티 가중 스텝</label><input type="number" min="0" step="0.01" id="masterCavityStep" class="w-full p-2 border rounded bg-white text-sm"></div>
+                    </div>
+                </div>
+                <div>
+                    <h3 class="text-sm font-semibold text-slate-600 mb-2">형상 복잡도 가중치</h3>
+                    <div class="grid grid-cols-3 gap-3">
+                        <div><label class="block text-xs text-slate-500 mb-1">일반</label><input type="number" min="0" step="0.01" id="masterComplexitySimple" class="w-full p-2 border rounded bg-white text-sm"></div>
+                        <div><label class="block text-xs text-slate-500 mb-1">복잡</label><input type="number" min="0" step="0.01" id="masterComplexityNormal" class="w-full p-2 border rounded bg-white text-sm"></div>
+                        <div><label class="block text-xs text-slate-500 mb-1">초정밀</label><input type="number" min="0" step="0.01" id="masterComplexityPrecision" class="w-full p-2 border rounded bg-white text-sm"></div>
+                    </div>
+                </div>
+                <div class="flex flex-wrap items-center gap-2 pt-2 border-t border-slate-200">
+                    <button onclick="saveMasterData()" class="bg-emerald-600 hover:bg-emerald-700 text-white text-sm px-3 py-1.5 rounded">저장</button>
+                    <button onclick="resetMasterData()" class="bg-slate-400 hover:bg-slate-500 text-white text-sm px-3 py-1.5 rounded">기본값으로 초기화</button>
+                    <button onclick="exportMasterData()" class="bg-slate-700 hover:bg-slate-800 text-white text-sm px-3 py-1.5 rounded">JSON 내보내기</button>
+                    <label class="bg-slate-700 hover:bg-slate-800 text-white text-sm px-3 py-1.5 rounded cursor-pointer">
+                        JSON 가져오기
+                        <input type="file" accept="application/json" onchange="importMasterData(event)" class="hidden">
+                    </label>
+                    <span id="masterSaveMsg" class="text-xs text-emerald-600"></span>
+                </div>
+            </div>
+        </details>
+    </div>
+
+    <!-- 인쇄 전용 견적서 (화면에는 숨김, @media print에서만 표시) -->
+    <div id="printArea">
+        <h1 style="font-size:22px; font-weight:bold; margin-bottom:4px;">사출금형 견적서 (Injection Mold Quotation)</h1>
+        <p style="font-size:12px; color:#555; margin-bottom:16px;">본 견적서는 참고용 추정 견적이며, 부가세는 별도입니다.</p>
+        <table style="width:100%; font-size:13px; margin-bottom:16px; border-collapse:collapse;">
+            <tr><td style="padding:4px 0; width:120px;">고객사</td><td id="printCustomer" style="font-weight:bold;">-</td></tr>
+            <tr><td style="padding:4px 0;">프로젝트명</td><td id="printProject" style="font-weight:bold;">-</td></tr>
+            <tr><td style="padding:4px 0;">견적일</td><td id="printQuoteDate">-</td></tr>
+            <tr><td style="padding:4px 0;">유효기간</td><td id="printValidUntil">-</td></tr>
+        </table>
+        <table style="width:100%; font-size:13px; border-collapse:collapse; border:1px solid #ccc;">
+            <thead>
+                <tr style="background:#0f172a; color:#fff;">
+                    <th style="padding:6px 8px; text-align:left;">견적 항목</th>
+                    <th style="padding:6px 8px; text-align:right;">금액</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr style="border-bottom:1px solid #eee;"><td style="padding:6px 8px;">금형 예상 중량</td><td id="printWeight" style="padding:6px 8px; text-align:right;">-</td></tr>
+                <tr style="border-bottom:1px solid #eee;"><td style="padding:6px 8px;">재료비</td><td id="printMaterial" style="padding:6px 8px; text-align:right;">-</td></tr>
+                <tr style="border-bottom:1px solid #eee;"><td style="padding:6px 8px;">가공비</td><td id="printMachining" style="padding:6px 8px; text-align:right;">-</td></tr>
+                <tr style="border-bottom:1px solid #eee;"><td style="padding:6px 8px;">기구 추가비</td><td id="printMechanism" style="padding:6px 8px; text-align:right;">-</td></tr>
+                <tr style="border-bottom:1px solid #eee;"><td style="padding:6px 8px; font-weight:bold;">제조원가</td><td id="printTotalCost" style="padding:6px 8px; text-align:right; font-weight:bold;">-</td></tr>
+                <tr style="border-bottom:1px solid #eee;"><td style="padding:6px 8px;">마진 금액</td><td id="printMarginProfit" style="padding:6px 8px; text-align:right;">-</td></tr>
+                <tr><td style="padding:8px; font-weight:bold; font-size:15px;">최종 공급가 (부가세 별도)</td><td id="printFinalPrice" style="padding:8px; text-align:right; font-weight:bold; font-size:15px;">-</td></tr>
+            </tbody>
+        </table>
+    </div>
+
+    <!-- 비즈니스 가공 로직 JavaScript -->
+    <script>
+        // 마스터 데이터 (단일 소스, R7 대응 — 임율/단가 하드코딩 금지)
+        const DEFAULT_MASTER = {
+            steel: { P20: 3500, NAK80: 5500, H13: 8000 },   // 원/kg
+            rate: { design: 35000, cnc: 50000, edm: 40000, assembly: 30000 }, // 원/hr
+            moldBaseFactor: 1.2,      // L×W×factor
+            slideUnit: 1200000,
+            lifterUnit: 600000,
+            trialRun: 500000,
+            overhead: 0,              // 일반관리비 (Phase 4에서 마스터 편집 UI로 확장 예정, 현재는 입력값의 초기 기본값)
+            complexity: { simple: 1.0, normal: 1.2, precision: 1.5 },
+            cavityStep: 0.15          // D-02: 가공시간 계수 1 + (cavity-1) × cavityStep
+        };
+
+        const RATE_LABELS = {
+            design: '설계/CAD',
+            cnc: 'CNC 고속가공',
+            edm: '방전 가공',
+            assembly: '사상 및 조립'
+        };
+
+        const COMPLEXITY_LABELS = {
+            simple: '일반',
+            normal: '복잡',
+            precision: '초정밀'
+        };
+
+        // localStorage 키 (REQ-18: 브라우저 재시작 후에도 유지)
+        const STORAGE_KEYS = {
+            master: 'moldEstimator_master_v1',
+            history: 'moldEstimator_history_v1'
+        };
+
+        // 폼 입력 필드 전체 목록 — 견적 이력 저장/복원에 사용
+        const FORM_FIELD_IDS = [
+            'customerName', 'projectName', 'quoteDate', 'validDays',
+            'length', 'width', 'thickness', 'steelType', 'cavities', 'complexity',
+            'tDesign', 'tCnc', 'tEdm', 'tAssembly',
+            'slideCount', 'lifterCount', 'hotRunner', 'marginRate', 'overhead'
+        ];
+
+        // 마스터 데이터 로드: localStorage에 저장된 값이 있으면 그것을, 없으면 기본값을 사용 (REQ-08, REQ-18)
+        function loadMaster() {
+            try {
+                const raw = localStorage.getItem(STORAGE_KEYS.master);
+                if (raw) return JSON.parse(raw);
+            } catch (e) {
+                // 손상된 데이터는 무시하고 기본값으로 대체
+            }
+            return JSON.parse(JSON.stringify(DEFAULT_MASTER));
+        }
+
+        let MASTER = loadMaster();
+
+        // 0 이상 유한수로 방어 (REQ-15: 음수·문자·공백 입력 방어)
+        function toNonNegativeNumber(value) {
+            const n = parseFloat(value);
+            if (!isFinite(n) || n < 0) return 0;
+            return n;
+        }
+
+        function renderMasterLabels() {
+            // 강재 종류 옵션을 마스터 데이터에서 렌더링
+            const steelSelect = document.getElementById('steelType');
+            const prevSteel = steelSelect.value;
+            steelSelect.innerHTML = '';
+            Object.keys(MASTER.steel).forEach((name) => {
+                const price = MASTER.steel[name];
+                const opt = document.createElement('option');
+                opt.value = price;
+                opt.textContent = `${name} (${price.toLocaleString()}원/kg)`;
+                if (name === 'NAK80') opt.selected = true;
+                steelSelect.appendChild(opt);
+            });
+            if (prevSteel && [...steelSelect.options].some(o => o.value === prevSteel)) steelSelect.value = prevSteel;
+
+            // 공정 임율 라벨을 마스터 데이터에서 렌더링
+            Object.keys(RATE_LABELS).forEach((key) => {
+                const el = document.getElementById('label' + key.charAt(0).toUpperCase() + key.slice(1));
+                if (el) el.textContent = `${RATE_LABELS[key]} (임율: ${MASTER.rate[key].toLocaleString()}원)`;
+            });
+
+            // 복잡도 옵션을 마스터 데이터에서 렌더링
+            const complexitySelect = document.getElementById('complexity');
+            const prevComplexity = complexitySelect.value;
+            complexitySelect.innerHTML = '';
+            Object.keys(MASTER.complexity).forEach((key) => {
+                const factor = MASTER.complexity[key];
+                const opt = document.createElement('option');
+                opt.value = factor;
+                opt.textContent = `${COMPLEXITY_LABELS[key]} (×${factor})`;
+                if (key === 'simple') opt.selected = true;
+                complexitySelect.appendChild(opt);
+            });
+            if (prevComplexity && [...complexitySelect.options].some(o => o.value === prevComplexity)) complexitySelect.value = prevComplexity;
+
+            // 일반관리비 입력 초기값을 마스터 데이터에서 설정 (최초 1회만)
+            const overheadInput = document.getElementById('overhead');
+            if (overheadInput.value === '') overheadInput.value = MASTER.overhead;
+
+            // 견적일 기본값 = 오늘 날짜(로컬 PC 기준)
+            const quoteDateInput = document.getElementById('quoteDate');
+            if (!quoteDateInput.value) {
+                const today = new Date();
+                const yyyy = today.getFullYear();
+                const mm = String(today.getMonth() + 1).padStart(2, '0');
+                const dd = String(today.getDate()).padStart(2, '0');
+                quoteDateInput.value = `${yyyy}-${mm}-${dd}`;
+            }
+        }
+
+        function populateMasterForm() {
+            document.getElementById('masterSteelP20').value = MASTER.steel.P20;
+            document.getElementById('masterSteelNAK80').value = MASTER.steel.NAK80;
+            document.getElementById('masterSteelH13').value = MASTER.steel.H13;
+            document.getElementById('masterRateDesign').value = MASTER.rate.design;
+            document.getElementById('masterRateCnc').value = MASTER.rate.cnc;
+            document.getElementById('masterRateEdm').value = MASTER.rate.edm;
+            document.getElementById('masterRateAssembly').value = MASTER.rate.assembly;
+            document.getElementById('masterMoldBaseFactor').value = MASTER.moldBaseFactor;
+            document.getElementById('masterSlideUnit').value = MASTER.slideUnit;
+            document.getElementById('masterLifterUnit').value = MASTER.lifterUnit;
+            document.getElementById('masterTrialRun').value = MASTER.trialRun;
+            document.getElementById('masterCavityStep').value = MASTER.cavityStep;
+            document.getElementById('masterComplexitySimple').value = MASTER.complexity.simple;
+            document.getElementById('masterComplexityNormal').value = MASTER.complexity.normal;
+            document.getElementById('masterComplexityPrecision').value = MASTER.complexity.precision;
+        }
+
+        function showMasterSaveMsg(text) {
+            const el = document.getElementById('masterSaveMsg');
+            el.textContent = text;
+            setTimeout(() => { if (el.textContent === text) el.textContent = ''; }, 3000);
+        }
+
+        function saveMasterData() {
+            MASTER = {
+                steel: {
+                    P20: toNonNegativeNumber(document.getElementById('masterSteelP20').value),
+                    NAK80: toNonNegativeNumber(document.getElementById('masterSteelNAK80').value),
+                    H13: toNonNegativeNumber(document.getElementById('masterSteelH13').value)
+                },
+                rate: {
+                    design: toNonNegativeNumber(document.getElementById('masterRateDesign').value),
+                    cnc: toNonNegativeNumber(document.getElementById('masterRateCnc').value),
+                    edm: toNonNegativeNumber(document.getElementById('masterRateEdm').value),
+                    assembly: toNonNegativeNumber(document.getElementById('masterRateAssembly').value)
+                },
+                moldBaseFactor: toNonNegativeNumber(document.getElementById('masterMoldBaseFactor').value),
+                slideUnit: toNonNegativeNumber(document.getElementById('masterSlideUnit').value),
+                lifterUnit: toNonNegativeNumber(document.getElementById('masterLifterUnit').value),
+                trialRun: toNonNegativeNumber(document.getElementById('masterTrialRun').value),
+                overhead: MASTER.overhead,
+                complexity: {
+                    simple: toNonNegativeNumber(document.getElementById('masterComplexitySimple').value),
+                    normal: toNonNegativeNumber(document.getElementById('masterComplexityNormal').value),
+                    precision: toNonNegativeNumber(document.getElementById('masterComplexityPrecision').value)
+                },
+                cavityStep: toNonNegativeNumber(document.getElementById('masterCavityStep').value)
+            };
+            localStorage.setItem(STORAGE_KEYS.master, JSON.stringify(MASTER));
+            renderMasterLabels();
+            calculateQuote();
+            showMasterSaveMsg('저장되었습니다.');
+        }
+
+        function resetMasterData() {
+            MASTER = JSON.parse(JSON.stringify(DEFAULT_MASTER));
+            localStorage.removeItem(STORAGE_KEYS.master);
+            populateMasterForm();
+            renderMasterLabels();
+            calculateQuote();
+            showMasterSaveMsg('기본값으로 초기화되었습니다.');
+        }
+
+        function exportMasterData() {
+            const blob = new Blob([JSON.stringify(MASTER, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            const today = new Date();
+            const stamp = `${today.getFullYear()}${String(today.getMonth() + 1).padStart(2, '0')}${String(today.getDate()).padStart(2, '0')}`;
+            a.href = url;
+            a.download = `mold_master_${stamp}.json`;
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+
+        function importMasterData(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = () => {
+                try {
+                    const imported = JSON.parse(reader.result);
+                    if (!imported.steel || !imported.rate) throw new Error('invalid shape');
+                    MASTER = imported;
+                    localStorage.setItem(STORAGE_KEYS.master, JSON.stringify(MASTER));
+                    populateMasterForm();
+                    renderMasterLabels();
+                    calculateQuote();
+                    showMasterSaveMsg('가져오기 완료.');
+                } catch (e) {
+                    alert('마스터 데이터 파일 형식이 올바르지 않습니다.');
+                }
+            };
+            reader.readAsText(file);
+            event.target.value = '';
+        }
+
+        // 견적 이력: 폼 상태 캡처/복원 (REQ-10)
+        function captureFormState() {
+            const state = {};
+            FORM_FIELD_IDS.forEach((id) => { state[id] = document.getElementById(id).value; });
+            return state;
+        }
+
+        function restoreFormState(state) {
+            FORM_FIELD_IDS.forEach((id) => {
+                if (state[id] !== undefined) document.getElementById(id).value = state[id];
+            });
+            calculateQuote();
+        }
+
+        function loadHistory() {
+            try {
+                const raw = localStorage.getItem(STORAGE_KEYS.history);
+                if (raw) return JSON.parse(raw);
+            } catch (e) {
+                // 손상된 데이터는 무시
+            }
+            return [];
+        }
+
+        function renderHistoryList() {
+            const history = loadHistory();
+            const container = document.getElementById('historyList');
+            if (history.length === 0) {
+                container.innerHTML = '<p class="text-slate-500">이력이 없습니다.</p>';
+                return;
+            }
+            container.innerHTML = '';
+            history.forEach((record) => {
+                const row = document.createElement('div');
+                row.className = 'flex justify-between items-center bg-white border border-slate-200 rounded px-3 py-2';
+                const label = document.createElement('span');
+                const customer = record.formState.customerName || '(고객사 미입력)';
+                const project = record.formState.projectName || '(프로젝트 미입력)';
+                label.textContent = `${record.savedAt} · ${customer} / ${project} — ${record.result.finalPrice.toLocaleString()}원`;
+                const btnGroup = document.createElement('span');
+                btnGroup.className = 'space-x-2';
+                const loadBtn = document.createElement('button');
+                loadBtn.textContent = '불러오기';
+                loadBtn.className = 'text-xs bg-slate-700 hover:bg-slate-800 text-white px-2 py-1 rounded';
+                loadBtn.onclick = () => restoreFormState(record.formState);
+                const delBtn = document.createElement('button');
+                delBtn.textContent = '삭제';
+                delBtn.className = 'text-xs bg-red-500 hover:bg-red-600 text-white px-2 py-1 rounded';
+                delBtn.onclick = () => deleteHistoryItem(record.id);
+                btnGroup.appendChild(loadBtn);
+                btnGroup.appendChild(delBtn);
+                row.appendChild(label);
+                row.appendChild(btnGroup);
+                container.appendChild(row);
+            });
+        }
+
+        function saveQuoteToHistory() {
+            const history = loadHistory();
+            const record = {
+                id: Date.now(),
+                savedAt: new Date().toLocaleString('ko-KR'),
+                formState: captureFormState(),
+                result: computedData
+            };
+            history.unshift(record);
+            const capped = history.slice(0, 50); // REQ-10: 최근 50건 상한
+            localStorage.setItem(STORAGE_KEYS.history, JSON.stringify(capped));
+            renderHistoryList();
+        }
+
+        function deleteHistoryItem(id) {
+            const history = loadHistory().filter((r) => r.id !== id);
+            localStorage.setItem(STORAGE_KEYS.history, JSON.stringify(history));
+            renderHistoryList();
+        }
+
+        let computedData = {};
+
+        function calculateQuote() {
+            // 입력값 파싱 + 방어 (음수/문자/공백 → 0)
+            const L = toNonNegativeNumber(document.getElementById('length').value);
+            const W = toNonNegativeNumber(document.getElementById('width').value);
+            const T = toNonNegativeNumber(document.getElementById('thickness').value);
+            const steelPriceKg = toNonNegativeNumber(document.getElementById('steelType').value);
+            const tDesign = toNonNegativeNumber(document.getElementById('tDesign').value);
+            const tCnc = toNonNegativeNumber(document.getElementById('tCnc').value);
+            const tEdm = toNonNegativeNumber(document.getElementById('tEdm').value);
+            const tAssembly = toNonNegativeNumber(document.getElementById('tAssembly').value);
+            const slideCount = toNonNegativeNumber(document.getElementById('slideCount').value);
+            const lifterCount = toNonNegativeNumber(document.getElementById('lifterCount').value);
+            const hotRunnerCost = toNonNegativeNumber(document.getElementById('hotRunner').value);
+            const marginRate = toNonNegativeNumber(document.getElementById('marginRate').value);
+            const complexityFactor = toNonNegativeNumber(document.getElementById('complexity').value) || 1.0;
+            const overhead = toNonNegativeNumber(document.getElementById('overhead').value);
+
+            // 캐비티는 최소 1개 (0 이하 입력 방어)
+            const cavitiesRaw = toNonNegativeNumber(document.getElementById('cavities').value);
+            const cavities = cavitiesRaw < 1 ? 1 : Math.round(cavitiesRaw);
+            const cavityFactor = 1 + (cavities - 1) * MASTER.cavityStep; // D-02
+
+            // 1. 중량 및 재료비 계산 (철 밀도 7.85) — 복잡도/캐비티와 무관
+            const weight = (L * W * T / 1000000) * 7.85;
+            const baseMaterialCost = weight * steelPriceKg;
+            const moldBaseStructureCost = L * W * MASTER.moldBaseFactor;
+            const totalMaterial = baseMaterialCost + moldBaseStructureCost + hotRunnerCost;
+
+            // 2. 가공 공정비 계산 (마스터 임율 × 복잡도 가중 × 캐비티 가중)
+            const costDesign = tDesign * MASTER.rate.design;
+            const costCnc = tCnc * MASTER.rate.cnc;
+            const costEdm = tEdm * MASTER.rate.edm;
+            const costAssembly = tAssembly * MASTER.rate.assembly;
+            const totalMachining = (costDesign + costCnc + costEdm + costAssembly) * complexityFactor * cavityFactor;
+
+            // 3. 기구부 특수 가공비
+            const totalMechanism = (slideCount * MASTER.slideUnit) + (lifterCount * MASTER.lifterUnit);
+
+            // 4. 합산 및 마진 적용
+            const manufacturingCost = totalMaterial + totalMachining + totalMechanism + MASTER.trialRun;
+            const marginProfit = manufacturingCost * (marginRate / 100);
+            const finalPrice = manufacturingCost + marginProfit + overhead;
+
+            computedData = {
+                weight: weight.toFixed(1),
+                material: Math.round(totalMaterial),
+                machining: Math.round(totalMachining),
+                mechanism: Math.round(totalMechanism),
+                totalCost: Math.round(manufacturingCost),
+                marginProfit: Math.round(marginProfit),
+                finalPrice: Math.round(finalPrice)
+            };
+
+            document.getElementById('resWeight').innerText = `${computedData.weight} kg`;
+            document.getElementById('resMaterial').innerText = `${computedData.material.toLocaleString()} 원`;
+            document.getElementById('resMachining').innerText = `${computedData.machining.toLocaleString()} 원`;
+            document.getElementById('resMechanism').innerText = `${computedData.mechanism.toLocaleString()} 원`;
+            document.getElementById('resTotalCost').innerText = `${computedData.totalCost.toLocaleString()} 원`;
+            document.getElementById('resMarginProfit').innerText = `${computedData.marginProfit.toLocaleString()} 원`;
+            document.getElementById('resFinalPrice').innerText = `${computedData.finalPrice.toLocaleString()} 원`;
+
+            // 인쇄용 견적서 영역도 동일한 computedData로 바인딩 (화면-출력물 금액 100% 일치 보장)
+            const customerName = document.getElementById('customerName').value.trim() || '-';
+            const projectName = document.getElementById('projectName').value.trim() || '-';
+            const quoteDateValue = document.getElementById('quoteDate').value;
+            const validDays = Math.round(toNonNegativeNumber(document.getElementById('validDays').value));
+
+            document.getElementById('printCustomer').innerText = customerName;
+            document.getElementById('printProject').innerText = projectName;
+            document.getElementById('printQuoteDate').innerText = quoteDateValue || '-';
+
+            if (quoteDateValue) {
+                const validUntil = new Date(quoteDateValue);
+                validUntil.setDate(validUntil.getDate() + validDays);
+                const yyyy = validUntil.getFullYear();
+                const mm = String(validUntil.getMonth() + 1).padStart(2, '0');
+                const dd = String(validUntil.getDate()).padStart(2, '0');
+                document.getElementById('printValidUntil').innerText = `견적일로부터 ${validDays}일 (${yyyy}-${mm}-${dd}까지)`;
+            } else {
+                document.getElementById('printValidUntil').innerText = `견적일로부터 ${validDays}일`;
+            }
+
+            document.getElementById('printWeight').innerText = `${computedData.weight} kg`;
+            document.getElementById('printMaterial').innerText = `${computedData.material.toLocaleString()} 원`;
+            document.getElementById('printMachining').innerText = `${computedData.machining.toLocaleString()} 원`;
+            document.getElementById('printMechanism').innerText = `${computedData.mechanism.toLocaleString()} 원`;
+            document.getElementById('printTotalCost').innerText = `${computedData.totalCost.toLocaleString()} 원`;
+            document.getElementById('printMarginProfit').innerText = `${computedData.marginProfit.toLocaleString()} 원`;
+            document.getElementById('printFinalPrice').innerText = `${computedData.finalPrice.toLocaleString()} 원`;
+        }
+
+        // 개발용 콘솔 자가검증 함수 (plan.md §7). 브라우저 콘솔에서 __selfTest() 실행.
+        // 마스터 데이터를 사용자가 편집했더라도 DEFAULT_MASTER 기준으로 검증한 뒤 원상 복구한다.
+        function __selfTest() {
+            const originalMaster = MASTER;
+            const originalFormState = captureFormState();
+
+            MASTER = JSON.parse(JSON.stringify(DEFAULT_MASTER));
+            renderMasterLabels();
+
+            const baseInput = {
+                length: '400', width: '400', thickness: '350', steelType: '5500',
+                cavities: '2', complexity: '1',
+                tDesign: '20', tCnc: '45', tEdm: '30', tAssembly: '25',
+                slideCount: '1', lifterCount: '2', hotRunner: '0',
+                marginRate: '25', overhead: '0'
+            };
+
+            const cases = [
+                {
+                    name: 'T1: 기본값 (400×400×350, NAK80)',
+                    input: baseInput,
+                    expect: { weight: '439.6', material: 2609800, machining: 5635000, mechanism: 2400000, totalCost: 11144800, marginProfit: 2786200, finalPrice: 13931000 }
+                },
+                {
+                    name: 'T2: 치수 0 입력',
+                    input: Object.assign({}, baseInput, { length: '0', width: '0', thickness: '0' }),
+                    expect: { weight: '0.0', material: 0 }
+                },
+                {
+                    name: 'T3: 마진율 음수(-10) 입력',
+                    // REQ-15 방어 정책상 경고 UI 대신 0으로 클램프한다 (plan.md Phase 1 결정 사항)
+                    input: Object.assign({}, baseInput, { marginRate: '-10' }),
+                    expect: { marginProfit: 0, finalPrice: 11144800 }
+                }
+            ];
+
+            const results = cases.map((c) => {
+                Object.keys(c.input).forEach((id) => { document.getElementById(id).value = c.input[id]; });
+                calculateQuote();
+                const diffs = Object.keys(c.expect).filter((key) => String(computedData[key]) !== String(c.expect[key]));
+                return {
+                    케이스: c.name,
+                    결과: diffs.length === 0 ? 'PASS' : 'FAIL',
+                    차이: diffs.map((key) => `${key}: 기대 ${c.expect[key]} / 실제 ${computedData[key]}`).join('; ')
+                };
+            });
+
+            MASTER = originalMaster;
+            renderMasterLabels();
+            restoreFormState(originalFormState);
+
+            console.table(results);
+            const allPass = results.every((r) => r.결과 === 'PASS');
+            console.log(allPass ? '✅ __selfTest 전체 통과' : '❌ __selfTest 실패 케이스 있음 — 위 표 참고');
+            return results;
+        }
+
+        // 초기 구동
+        renderMasterLabels();
+        populateMasterForm();
+        renderHistoryList();
+        calculateQuote();
+    </script>
+</body>
+</html>
